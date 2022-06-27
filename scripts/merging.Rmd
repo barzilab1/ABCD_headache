@@ -1,0 +1,98 @@
+---
+title: "Merging"
+author: "Kate Tran"
+date: "5/5/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(readr)
+library(dplyr)
+library(tidyr)
+```
+
+```{r}
+# Combine demographics at baseline and longitudinal
+demo_baseline <- read_csv("outputs/demographics_baseline.csv") %>% 
+  dplyr::select(-sex, -contains(c("demo_fam_exp", "race", "hisp")))
+
+demo_race_eth <- read_csv("outputs/demographics_baseline.csv") %>% 
+  dplyr::select(src_subject_id, contains(c("race", "hisp")))
+
+demo_long <- read_csv("outputs/demographics_long.csv") %>% dplyr::select(-interview_date, -interview_age, -sex, -contains("demo_fam_exp")) %>% 
+  mutate(across(c(
+    household_income,
+    parents_avg_edu,
+    separated_or_divorced,
+    parents_married,
+    age,
+    sex_br,
+    gender,
+    demo_fam_poverty
+  ),
+  function(x) {case_when(eventname == "baseline_year_1_arm_1" ~ NA_real_,
+                         TRUE ~ as.numeric(x))}))
+
+common_names <- names(demo_baseline)[names(demo_baseline) %in% names(demo_long)]
+common_names <- common_names[!common_names %in% c("src_subject_id", "interview_age", "eventname")]
+
+demo_baseline <- demo_baseline %>% 
+  dplyr::rename_with(.col = all_of(common_names), ~paste0(., "_bl"))
+
+demo_merge <- left_join(demo_long, demo_baseline) %>% 
+  left_join(demo_race_eth)
+
+demo_merge <- demo_merge %>% 
+  mutate(household_income = coalesce(household_income_bl, household_income),
+         age = coalesce(age_bl, age),
+         sex_br = coalesce(sex_br_bl, sex_br),
+         gender = coalesce(gender_bl, gender),
+         parents_avg_edu = coalesce(parents_avg_edu_bl, parents_avg_edu)
+  ) %>% 
+  dplyr::select(-ends_with("_bl"))
+
+
+# Create poverty line 1-2-3-4 is 1, >=6 is 0
+
+# demo_merge <- demo_merge %>% 
+#   mutate(fam_under_poverty_line = case_when(
+#     # group 5: half above poverty line, half below --> NA
+#     household_income <= 4 ~ 1,
+#     household_income >= 6 ~ 0,
+#     TRUE ~ NA_real_))
+```
+
+```{r}
+hormone_saliva <- read_csv("outputs/hormone_saliva.csv")
+exposome_set <- read_csv("outputs/exposome_set.csv")
+exposome_sum_set <- read_csv("outputs/exposome_sum_set.csv")
+geo_data <- read_csv("outputs/geo_data.csv") %>% filter(eventname == "baseline_year_1_arm_1") %>% dplyr::select(-eventname)
+ABCD_BMI <- read_csv("outputs/ABCD_BMI.csv")
+physicalhealth_sum <- read_csv("outputs/physicalhealth_sum.csv")
+physicalhealth <- read_csv("outputs/physicalhealth.csv")
+site <- read_csv("outputs/site.csv") %>% filter(eventname == "1_year_follow_up_y_arm_1") %>% dplyr::select(contains(c("src", "site")))
+family_id <- read.csv("../outputs/family_id.csv") %>% dplyr::select(contains(c("src", "family")))
+```
+
+```{r}
+dataset_long <- physicalhealth %>% 
+  full_join(physicalhealth_sum) %>% 
+  left_join(demo_merge) %>% 
+  left_join(exposome_set) %>% 
+  left_join(exposome_sum_set) %>% 
+  left_join(hormone_saliva) %>% 
+  left_join(ABCD_BMI) %>% 
+  left_join(site) %>% 
+  left_join(family_id) %>% 
+    filter(eventname %in% c("baseline_year_1_arm_1", "1_year_follow_up_y_arm_1", "2_year_follow_up_y_arm_1")) %>% 
+  mutate(eventname = recode(eventname, 
+                            baseline_year_1_arm_1 = "bl",
+                            `1_year_follow_up_y_arm_1` = "1y",
+                            `2_year_follow_up_y_arm_1` = "2y"),
+         age_year = age/12)
+```
+

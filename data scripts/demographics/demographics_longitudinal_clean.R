@@ -1,7 +1,7 @@
 ##############################################
-#' most of the code below is adjusted from 
+#' most of the code below is adjusted from
 #' the abcd official github:
-#' https://github.com/ABCD-STUDY/analysis-nda 
+#' https://github.com/ABCD-STUDY/analysis-nda
 ##############################################
 
 library(data.table)
@@ -13,8 +13,8 @@ demographics_set = load_instrument("abcd_lpds01",abcd_files_path)
 demographics_set[demographics_set == 777 | demographics_set == 999] = NA
 
 
-########### rearrange data ########### 
-### convert variables names to be more readable  
+########### rearrange data ###########
+### convert variables names to be more readable
 demographics_set = data.table(demographics_set)
 
 ########### sex
@@ -33,11 +33,11 @@ demographics_set[, demo_gender_id_v2_l:= NULL]
 ########### parents education
 demographics_set[, parents_avg_edu:= rowMeans(.SD, na.rm = T), .SDcols = c("demo_prnt_ed_v2_l", "demo_prtnr_ed_v2_l")]
 
-########### family income 
+########### family income
 demographics_set[,household_income:= demo_comb_income_v2_l]
 demographics_set[,demo_comb_income_v2_l := NULL]
 
-########### parents married status 
+########### parents married status
 demographics_set[,separated_or_divorced := 0]
 demographics_set[(demo_prnt_marital_v2_l %in%  c(3,4)), separated_or_divorced := 1]
 demographics_set[is.na(demo_prnt_marital_v2_l), separated_or_divorced := NA]
@@ -61,10 +61,10 @@ VSS.scree(xcor)
 eigen(xcor)$values[1]/eigen(xcor)$values[2]
 
 demographics_set[, demo_fam_poverty := {
-  fcase(
-    rowSums(is.na(.SD)) != 7,rowSums(.SD, na.rm = T) ,
-    default = NA
-  )
+    fcase(
+        rowSums(is.na(.SD)) != 7,rowSums(.SD, na.rm = T) ,
+        default = NA
+    )
 }, .SDcols = economic_hardship_names]
 
 
@@ -76,12 +76,12 @@ demographics_set = droplevels(demographics_set)
 
 
 selected_features = c("src_subject_id", "interview_date", "interview_age", "demo_prim_l" , "eventname", "sex",
-                      "household_income","demo_prnt_ed_v2_l", "demo_prtnr_ed_v2_l", "parents_avg_edu", 
+                      "household_income","demo_prnt_ed_v2_l", "demo_prtnr_ed_v2_l", "parents_avg_edu",
                       "demo_prnt_marital_v2_l", "separated_or_divorced", "parents_married", "living_with_partenr_or_married",
-                      "age", "sex_br", "gender", "demo_ed_v2_l", 
+                      "age", "sex_br", "gender", "demo_ed_v2_l",
                       economic_hardship_names, "demo_fam_poverty")
 
-write.csv(file = "outputs/demographics_long.csv",x = demographics_set[,.SD,.SDcols = selected_features], row.names=F, na = "")
+write.csv(file = "outputs/demographics_long.csv", x = demographics_set[,.SD,.SDcols = selected_features], row.names=F, na = "")
 
 
 

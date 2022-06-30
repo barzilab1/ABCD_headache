@@ -44,7 +44,9 @@ demo_baseline <- demo_baseline %>%
   dplyr::rename_with(.col = all_of(common_names), ~paste0(., "_bl"))
 
 demo_merge <- left_join(demo_long, demo_baseline) %>% 
-  left_join(demo_race_eth)
+  left_join(demo_race_eth) %>% 
+  mutate(age_bl = case_when(eventname != "baseline_year_1_arm_1" ~ NA_real_,
+                            TRUE ~ as.numeric(age_bl)))
 
 demo_merge <- demo_merge %>% 
   mutate(household_income = coalesce(household_income_bl, household_income),

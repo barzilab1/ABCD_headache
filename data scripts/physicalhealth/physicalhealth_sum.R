@@ -1,3 +1,4 @@
+library(plyr)
 
 source("config.R")
 source("utility_fun.R")
@@ -28,16 +29,22 @@ which(ssphy01$pds_y_ss_male_cat_2 & ssphy01$pds_y_ss_female_category_2)
 ssphy01$puberty_both_sexes = ifelse(is.na(ssphy01$pds_y_ss_male_cat_2), ssphy01$pds_y_ss_female_category_2, ssphy01$pds_y_ss_male_cat_2)
 
 
-########### ABCD Summary Scores Medical History ###########
+########### Summary Scores Medical History ###########
 
-# medhxss01 = load_instrument("abcd_medhxss01",abcd_files_path)
-
-#select variables for immune study
-# medhxss01 = medhxss01[,grepl("src|interview|event|sex|((6a|6l)_times_p)$",colnames(medhxss01))]
+medhxss01 = load_instrument("abcd_medhxss01",abcd_files_path)
+medhxss01 = medhxss01[,grepl("src|interview|event|medhx_ss_6i_times_p",colnames(medhxss01))]
 
 
-physicalhealth_sum = merge(ssphp01, ssphy01)
+########### Longitudinal Summary Scores Medical History ###########
 
+lssmh01 = load_instrument("abcd_lssmh01",abcd_files_path)
+lssmh01 = lssmh01[,grepl("src|interview|event|medhx_ss_6i_times_p_l",colnames(lssmh01))]
+#medhx_ss_6i_times_p_l has one value of 20. outlier? 
+
+
+
+
+physicalhealth_sum = rbind.fill(medhxss01, lssmh01)
 write.csv(file = "outputs/physicalhealth_sum.csv",x = physicalhealth_sum, row.names = F, na = "")
 
 

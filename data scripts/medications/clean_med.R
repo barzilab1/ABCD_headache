@@ -1,72 +1,84 @@
+library(readxl)
+library(data.table)
 
 source("config.R")
 source("utility_fun.R")
 
-medsy01 = load_instrument("medsy01", abcd_files_path)
+medsy01 = load_instrument("medsy01",abcd_files_path)
 
-#remove odd names
-ind = which(grepl("<span style=", medsy01$med1_rxnorm_p))
-medsy01$med1_rxnorm_p[ind] = NA
-ind = which(grepl("<span style=", medsy01$med_otc_1_rxnorm_p))
-medsy01$med_otc_1_rxnorm_p[ind] = NA
-medsy01 = droplevels(medsy01)
+#remove odd values
+colnames_to_clean = colnames(medsy01)[which(grepl("<span style=", medsy01))]
+for(colname in colnames_to_clean){
+  ind = which(grepl("<span style=", medsy01[[colname]]))
+  medsy01[[colname]][ind] = NA
+}
 
 #remove empty col
 medsy01 = medsy01[, colSums(is.na(medsy01)) != nrow(medsy01)]
 
 
-#################### create the medication table according to the tagging  ####################
-med_dataset = medsy01#[,grepl("(src|interview_a|gender|event|brou|_rxnorm_p)", colnames(medsy01))]
+med_dataset = medsy01[,grepl("(src|interview_a|gender|event|brou|^med(.)*_rxnorm(_1yr)*_p$|med(.)*_2wk_p)", colnames(medsy01))]
 
-# Update 4.0 - medication IDs + medication names --> remove medication names
-library(dplyr)
-med_dataset <- med_dataset %>%
-    # remove medication names
-    mutate(across(contains("_rxnorm_p"), ~ vapply(strsplit(.," "), `[`, 1, FUN.VALUE=character(1))))
+setDT(med_dataset)
+# split the med name to get the numbers 
+cols_to_fix = grep("^med(.)*_rxnorm(_1yr)*_p$", colnames(med_dataset), value = T)
+for (j in cols_to_fix) 
+  set(med_dataset, j = j, value = sapply(strsplit(med_dataset[[j]]," "), `[`, 1))
 
+# remove .0 at the end of the number
+for (j in cols_to_fix) 
+  set(med_dataset, j = j, value = as.numeric(med_dataset[[j]]))
 
-# tagged_med = read_csv(paste0(additional_files_path, "20210224_coded_medication.csv"))
-tagged_med = read_csv("~/Documents/KateTran_Github/ABCD_headache/materials/Headachecoded_medication_Marissa_02122022.csv")
-
-#split the med name to get the numbers
-tagged_med$med_number = vapply(strsplit(tagged_med$med," "), `[`, 1, FUN.VALUE=character(1))
-
-
-#add medication category to each child according to tagging
-for(i in 2:19){
-
-    #get med category
-    colname = colnames(tagged_med)[i]
-
-    #get the medications in the category
-    meds = unique(tagged_med$med_number[which(tagged_med[,i] == 1)])
-
-    #bug while reading the txt file: add ".0" to all meds numbers as it may appear in any of the two versions in the med_dataset
-    meds = union(meds, paste0(meds,".0"))
-
-    #mark the kids
-    med_dataset[,colname] = 0
-    med_dataset[apply(med_dataset[,grepl("_rxnorm_",colnames(med_dataset))], 1, function(r) any(r %in% meds)), colname] = 1
-
+# copy the medications number from last 1 year to last 2 wk
+for (j in 1:15) {
+  
+  col_name_1y = paste0("med",j,"_rxnorm_1yr_p")
+  col_name_1y_otc = paste0("med_otc_",j,"_rxnorm_1yr_p")
+  col_name_2w = paste0("med",j,"_2wk_p")
+  col_name_2w_otc = paste0("med_otc_",j,"_2wk_p")
+  
+  new_col_name = paste0("med",j,"_rxnorm_2wk_p")
+  new_col_name_otc = paste0("med_otc_",j,"_rxnorm_2wk_p")
+  
+  med_dataset[get(col_name_2w) ==1, (new_col_name) := .SD, .SDcols= col_name_1y] 
+  med_dataset[get(col_name_2w_otc) ==1, (new_col_name_otc) := .SD, .SDcols= col_name_1y_otc]
 }
 
-med_dataset[apply(med_dataset[,grepl("_rxnorm_",colnames(med_dataset))], 1, function(r) any(r %in% meds)), colname] = 1
+# med_dataset[,View(.SD), .SDcols = c(grepl("med_otc_10_(rxnorm_)?(2wk|1yr)", colnames(med_dataset)))]
 
 
-#fix the tagging for parents that refused to answer (brought_medications == 2) or NA
-med_dataset[(med_dataset$brought_medications %in% c(2,NA)),colnames(tagged_med)[2:19]] = NA
+#######################################################  
+# create the medication table according to the tagging
+#######################################################
+tagged_med = read_excel(paste0(additional_files_path, "coded_meds_07012022.xlsx"))
 
+#add medication category to each child according to tagging
+last_2wk_colnames = grep("_rxnorm_(2wk_)?p$",colnames(med_dataset),value = T)
+last_1yr_colnames = grep("_rxnorm_1yr_p$",colnames(med_dataset),value = T)
 
-#number of asthma meds
-asthma_meds = unique(tagged_med$med_number[which(tagged_med$Asthma_medications == 1)])
-
-med_dataset$Asthma_number_meds = apply(med_dataset[,grepl("_rxnorm_",colnames(med_dataset))], 1, function(r) sum(unique(as.numeric(r)) %in% asthma_meds))
-med_dataset[(med_dataset$brought_medications %in% c(2,NA)),"Asthma_number_meds"] = NA
-
-
-#remove empty columns
-# med_dataset = med_dataset[med_dataset$eventname == "baseline_year_1_arm_1",]
-# med_dataset = med_dataset[,colSums(is.na(med_dataset)) != nrow(med_dataset)]
+setDF(med_dataset)
+for(i in 13:ncol(tagged_med)){
+  
+  #get med category
+  colname = colnames(tagged_med)[i]
+  colname_1yr = paste0(colname,"_1yr")
+  colname_2w = paste0(colname,"_2w")
+  colname_1yr_sum = paste0(colname_1yr,"_total")
+  colname_2w_sum = paste0(colname_2w,"_total")
+  
+  #get the medications in the category
+  meds = unique(tagged_med$number[which(tagged_med[,i] == 1)])
+  
+  #tag the kids
+  med_dataset[,c(colname_2w, colname_1yr)] = 0
+  med_dataset[apply(med_dataset[,last_2wk_colnames], 1, function(r) any(r %in% meds)), colname_2w] = 1
+  med_dataset[, colname_2w_sum] = apply(med_dataset[,last_2wk_colnames], 1, function(r) {s = sum(r %in% meds)
+                                                                                          ifelse(s==0,NA,s)})
+  med_dataset[apply(med_dataset[,last_1yr_colnames], 1, function(r) any(r %in% meds)), colname_1yr] = 1
+  med_dataset[, colname_1yr_sum] = apply(med_dataset[,last_1yr_colnames], 1, function(r) {s = sum(r %in% meds)
+                                                                                          ifelse(s==0,NA,s)})
+  
+}
 
 
 write.csv(file = paste0("outputs/medications.csv"),x = med_dataset ,row.names=F, na = "")

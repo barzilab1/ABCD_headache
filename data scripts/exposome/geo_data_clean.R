@@ -17,6 +17,6 @@ rhds01 = rhds01[, grepl("^(src|interview|event|sex)|addr1_(valid|status|years|el
 summary(droplevels(rhds01[rhds01$eventname == "2_year_follow_up_y_arm_1",]))
 summary(droplevels(rhds01[rhds01$eventname == "baseline_year_1_arm_1",]))
 
-write.csv(file = "outputs/geo_data.csv",x = rhds01, row.names = F, na = "")
 
+write.csv(file = "outputs/geo_data.csv",x = rhds01, row.names = F, na = "")
 

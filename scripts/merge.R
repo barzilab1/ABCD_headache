@@ -1,36 +1,85 @@
 library(readr)
 library(plyr)
-
+library(dplyr)
+source("config.R")
 
 demographics_baseline <- read_csv("outputs/demographics_baseline.csv")
 demographics_long <- read_csv("outputs/demographics_long.csv")
-medications <- read_csv("outputs/medications.csv",col_types = cols(.default = "d", src_subject_id = "c", eventname = "c",))
+medications <- read_csv("outputs/medications.csv", col_types = cols(.default = "d", src_subject_id = "c", eventname = "c",))
 physicalhealth_sum <- read_csv("outputs/physicalhealth_sum.csv")
-physicalhealth <- read_csv("outputs/physicalhealth.csv")
+physicalhealth <- read_csv("outputs/physicalhealth.csv") %>% dplyr::select(-sex)
+hormone_saliva <- read_csv("outputs/hormone_saliva.csv")
+family_id <- read_csv("outputs/family_id.csv") %>% select(src_subject_id, rel_family_id)
+exposome_set <- read_csv("outputs/exposome_set.csv")
+exposome_sum_set <- read_csv("outputs/exposome_sum_set.csv")
+ABCD_BMI <- read_csv("outputs/ABCD_BMI.csv")
+psychopathology <- read_csv("outputs/psychopathology.csv")
+psychopathology_sum_scores <- read_csv("outputs/psychopathology_sum_scores.csv")
+site <- read_csv("outputs/site.csv")
+geo_data <- read_csv("outputs/geo_data.csv")
+e_factor <- read_csv(paste0(e_factor_files_path, "ABCD_Exposome_bifactor_scores_16March2021.csv"))
+e_factor$src_subject_id = paste0("NDAR_", e_factor$ID)
+e_factor$ID <- NULL
+genetics <- read_csv(paste0(genetic_files_path, "genetic.csv")) %>% dplyr::select(src_subject_id, migraine_PRS)
+ksad_y_diagnosis <- read_csv("outputs/ksad_y_diagnosis.csv")
 
+# suicide_set <- read_csv("outputs/suicide_set.csv")
 
 # combine demographics of all time points
 demo_race = demographics_baseline[,grep("src|race|hisp", colnames(demographics_baseline))]
 
 demographics_long = merge(demographics_long, demo_race)
-demographics_long = demographics_long[demographics_long$eventname != "baseline_year_1_arm_1",] 
+demographics_long = demographics_long[demographics_long$eventname != "baseline_year_1_arm_1",]
 
 demographics = rbind.fill(demographics_baseline, demographics_long)
 
 
 # define headaches medications
-medications = medications[,grep("src|inter|event|Migraine|Daily.Preventive|Rescue.Medications", colnames(medications))]
+medications = medications[,grep("src|inter|event|Migraine|Daily.Preventive|Rescue.Medications|topiramate", colnames(medications))]
 medications$any_migraine_med_2w = Reduce("|",medications[,c("Migraine.Medications_2w", "Daily.Preventive.medications_2w", "Rescue.Medications_2w")])*1
 medications$any_migraine_med_1yr = Reduce("|",medications[,c("Migraine.Medications_1yr", "Daily.Preventive.medications_1yr", "Rescue.Medications_1yr")])*1
 
-describe(medications)
 
 
 dataset = merge(demographics, medications)
 dataset = merge(dataset, physicalhealth_sum)
 dataset = merge(dataset, physicalhealth)
+dataset = merge(dataset, hormone_saliva)
+dataset = merge(dataset, family_id)
+dataset = merge(dataset, exposome_set)
+dataset = merge(dataset, exposome_sum_set, all.x = T)
+dataset = merge(dataset, ABCD_BMI)
+dataset = merge(dataset, psychopathology)
+dataset = merge(dataset, psychopathology_sum_scores)
+dataset = merge(dataset, ksad_y_diagnosis)
+dataset = merge(dataset, e_factor)
+dataset = merge(dataset, genetics)
+dataset = merge(dataset, site)
+dataset = merge(dataset, geo_data)
+# dataset = merge(dataset, suicide_set)
+
+# Create new variables
+dataset <- dataset %>%
+    mutate(
+        headache_severity_cat = case_when(
+            medhx_2q_l == 0 & any_migraine_med_2w == 0 ~ 0,
+            medhx_2q_l == 1 & any_migraine_med_2w == 0 ~ 1,
+            medhx_2q_l == 1 & Rescue.Medications_2w == 1 ~ 2,
+            medhx_2q_l == 1 & Migraine.Medications_2w == 1 ~ 3,
+            medhx_2q_l == 1 & Daily.Preventive.medications_2w == 1 ~ 4,
+            TRUE ~ NA_real_
+        )
+    ) %>%
+    janitor::remove_empty("cols")
 
 
+write.csv(file = "outputs/dataset_long.csv", x = dataset, row.names = F, na = "")
+
+
+
+
+
+########## DESCRIPTIVE ##########
 
 #################### table 1
 library(tableone)
@@ -45,7 +94,7 @@ write.csv(table1, file = "results/Table1.csv")
 
 
 
-#################### check overlaps 
+#################### check overlaps
 setDT(dataset)
 dataset[eventname == "baseline_year_1_arm_1", table(Migraine.Medications_2w, medhx_2q)]
 dataset[eventname == "baseline_year_1_arm_1", table(Daily.Preventive.medications_2w, medhx_2q)]
@@ -78,8 +127,8 @@ dataset_ever[, eventname := NULL]
 
 meds_1_year = grep("_1yr", colnames(dataset_ever), value = T)
 dataset_ever[, (meds_1_year) := NULL ]
-dataset_ever_wide = dcast(dataset_ever, 
-                          src_subject_id + race_white + race_black ~ time, 
+dataset_ever_wide = dcast(dataset_ever,
+                          src_subject_id + race_white + race_black ~ time,
                           value.var = c(grep("medhx|2w", colnames(dataset), value = T), "separated_or_divorced", "parents_married", "age", "demo_fam_poverty"))
 
 

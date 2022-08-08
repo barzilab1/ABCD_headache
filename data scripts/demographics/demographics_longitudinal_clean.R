@@ -26,8 +26,7 @@ demographics_set[, sex_br := (sex == "F")*1]
 demographics_set[, age := interview_age]
 
 ########### gender
-demographics_set[,gender := demo_gender_id_v2_l]
-demographics_set[, gender:= gender-1]
+demographics_set[, gender:= demo_gender_id_v2_l-1]
 demographics_set[, demo_gender_id_v2_l:= NULL]
 
 ########### parents education
@@ -81,7 +80,7 @@ selected_features = c("src_subject_id", "interview_date", "interview_age", "demo
                       "age", "sex_br", "gender", "demo_ed_v2_l",
                       economic_hardship_names, "demo_fam_poverty")
 
-write.csv(file = "outputs/demographics_long.csv", x = demographics_set[,.SD,.SDcols = selected_features], row.names=F, na = "")
+write.csv(file = "outputs/demographics_long.csv", x = demographics_set[,..selected_features], row.names=F, na = "")
 
 
 

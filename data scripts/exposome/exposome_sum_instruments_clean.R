@@ -10,7 +10,6 @@ sscey01 = load_instrument("abcd_sscey01",abcd_files_path)
 #remove nt (Number Total Questions) and nm (Number Missing Answers) and na (Number Answered)
 sscey01 = sscey01[,!grepl("_(nm|nt|na|answered)$",colnames(sscey01))] #pr
 
-
 # sscey01$school_protective_factors = as.numeric(as.character(sscey01$srpf_y_ss_ses)) + as.numeric(as.character(sscey01$srpf_y_ss_iiss))
 
 summary(droplevels(sscey01))
@@ -31,17 +30,6 @@ ssmty = ssmty[, grepl("(src|interview|event|sex)|_(weekend|weekday)$", colnames(
 summary(ssmty)
 
 
-########### Parent Adult Self Report Scores Aseba (ASR) ###########
-asrs = load_instrument("abcd_asrs01",abcd_files_path)
-summary(droplevels(asrs[asrs$eventname == "baseline_year_1_arm_1",]))
-
-
-########### Summary Scores Developmental History ###########
-devhxss = load_instrument("abcd_devhxss01", abcd_files_path)
-
-devhxss[devhxss == 999] = NA
-summary(droplevels(devhxss))
-
 
 ########### Longitudinal Summary Scores Sports Activity ###########
 lsssa = load_instrument("abcd_lsssa01", abcd_files_path)
@@ -55,10 +43,8 @@ summary(droplevels(lsssa))
 
 
 ########### merge all tables
-exposome_sum_set = merge(abcd_sscey01, abcd_ssmty01)
-exposome_sum_set = merge(exposome_sum_set, abcd_asrs01)
-exposome_sum_set = merge(exposome_sum_set, abcd_devhxss01)
-exposome_sum_set = merge(exposome_sum_set, abcd_lsssa01)
+exposome_sum_set = merge(sscey01, ssmty)
+exposome_sum_set = merge(exposome_sum_set, lsssa, all.x = T)
 
 write.csv(file = "outputs/exposome_sum_set.csv",x = exposome_sum_set, row.names = F, na = "")
 

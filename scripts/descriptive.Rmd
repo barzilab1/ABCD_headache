@@ -1,0 +1,623 @@
+---
+title: "Untitled"
+author: "Kate Tran"
+date: "7/7/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(dplyr)
+library(tableone)
+library(qgraph)
+library(corrplot)
+```
+
+```{r}
+dataset <- read.csv("../outputs/dataset_long.csv")
+```
+
+```{r}
+vars <- dataset %>% 
+    dplyr::select(
+        eventname,
+        household_income,
+        BMI,
+        
+        # Family History Questionnaire
+        famhx_ss_fath_prob_alc_p,
+        famhx_ss_moth_prob_alc_p,
+        famhx_ss_parent_alc_p,
+        famhx_ss_fath_prob_dg_p,
+        famhx_ss_moth_prob_dg_p,
+        famhx_ss_parent_dg_p,
+        famhx_ss_fath_prob_dprs_p,
+        famhx_ss_moth_prob_dprs_p,
+        famhx_ss_parent_dprs_p,
+        # Discrimination
+        dim_yesno_q1, dim_yesno_q2, dim_yesno_q3, dim_yesno_q4,
+        # Bullying/Cyberbullying
+        cybb_phenx_harm, cybb_phenx_harm2, bully_vic, bully_aggs, bully_aggs_90_q, bully_vic_90_q,
+        # Hormone
+        hormone_scr_dhea_mean, hormone_scr_hse_mean, hormone_scr_ert_mean,
+        
+        # Neighborhood information
+        neighborhood_crime_y,	# 	My neighborhood is safe from crime.
+        neighborhood1r_p,	# 	I feel safe walking in my neighborhood, day or night. 
+        neighborhood2r_p,	# 	Violence is not a problem in my neighborhood.
+        neighborhood3r_p,	# 	My neighborhood is safe from crime. 
+        ## ADI
+        reshist_addr1_adi_perc,
+        
+        # Exposome
+        Household_Adversity,
+        Neighborhood_Poverty,
+        DayToDay_Adversity,
+        State_Conservatism_Ruralness,
+        Family_Values,
+        Birth_Pregnancy_Complications,
+        Adversity_General_Factor,
+        sai_total_activities, # Total sport activity
+        
+        
+        pmq_y_ss_mean, # Parental Monitoring
+        fes_y_ss_fc, #Conflict Subscale from the Family Environment Scale Sum of Youth Report (RAW Score)
+        crpbi_y_ss_parent,# CRPBI - Acceptance Subscale Mean of Report by Parent Completing Protocol by youth
+        crpbi_y_ss_caregiver, # CRPBI - Acceptance Subscale Mean of Report by Secondary Caregiver by youth
+        srpf_y_ss_ses,	#	SRPF School Environment Subscale
+        srpf_y_ss_iiss,	#	SRPF School Involvement Subscale, Sum
+        srpf_y_ss_dfs,	#	SRPF School Disengagement Subscale, Sum
+        dim_y_ss_mean,	#	Discrimination Measure mean 
+        macv_y_ss_fs,	#	Family Support Sum Score mean
+        # macv_y_ss_isr,	#	Independence/Self Reliance: mean
+        # macv_y_ss_r,	#	Religion: mean
+        
+        # Negative life events
+        fes_y_ss_fc, # Family Conflict Questionnaire
+        ple_y_ss_total_bad,
+        peq_ss_relational_victim,
+        peq_ss_reputation_aggs,
+        peq_ss_reputation_victim,
+        peq_ss_overt_aggression,
+        peq_ss_overt_victim,
+        peq_ss_relational_aggs,
+        
+        ## individual questions from bad life events
+        
+        ple_died_fu_y, ple_injured_fu_y, ple_crime_fu_y, ple_friend_fu_y, ple_friend_injur_fu_y, ple_financial_fu_y, ple_sud_fu_y, ple_ill_fu_y, ple_injur_fu_y,
+        ple_argue_fu_y, ple_job_fu_y, ple_away_fu_y, ple_arrest_fu_y, ple_friend_died_fu_y, ple_mh_fu_y, ple_sib_fu_y, ple_victim_fu_y, ple_separ_fu_y, ple_law_fu_y,
+        ple_school_fu_y, ple_move_fu_y, ple_jail_fu_y, ple_step_fu_y, ple_new_job_fu_y, ple_new_sib_fu_y,
+        
+        # mental health diagnosis
+        diagnosis_depression_y, diagnosis_anxiety_y, diagnosis_sleep_y, diagnosis_anxiety_y,
+        
+        # Sleep problems
+        sleepdisturb1_p,	#	How many hours of sleep does your child get on most nights?
+        sleepdisturb4_p,	#	The child has difficulty getting to sleep at night.
+        sleepdisturb15_p,	#	The child snores.
+        sleepdisturb23_p,	#	The child awakes in the morning feeling tired.
+        sleepdisturb25_p,	#	The child experiences daytime sleepiness.
+        
+        # Headache problems
+        medhx_2h_l, # Epilepsy or Seizures
+        medhx_2q_l,	# Very Bad Headaches
+        medhx_6i_l,	# Head Injury
+        medhx_6j_l,	# Knocked Unconscious
+        contains("tbi"),
+        
+        # Medical history
+        medhx_ss_6i_times_p_l,
+        medhx_ss_6j_times_p_l,
+        medhx_ss_6p_times_p_l,
+        
+        # Medication
+        contains(c("Migraine", "Daily.Preventive", "Rescue.Medications", "topiramate"))
+    )
+```
+
+```{r}
+factors <- vars %>% 
+    dplyr::select(contains(c("famhx_ss_moth", "famhx_ss_fath", "cybb", "90_q", "tbi", "topiramate")), 
+                  starts_with("medhx_") & !contains("time"), ends_with(c("_2w", "_1yr"))) %>% names()
+```
+
+# Get description for table 1
+```{r}
+# dictionary <- readxl::read_excel("~/Documents/KateTran_Github/ABCD_headache/materials/headache_dictionary_05032022.xlsx") %>% 
+#     filter(element_name %in% all_of(names(vars))) %>% 
+#     dplyr::select(element_name, element_description, value_range, notes)
+# 
+# write.csv(file = "../outputs/table1_dictionary.csv", x = dictionary, row.names = F, na = "")
+```
+
+# 1. Table 1 by headache eventname
+```{r}
+# descrip_table_byheadache_bl <- vars %>% filter(eventname == "baseline_year_1_arm_1") %>% 
+#     tbl_summary(
+#     by = medhx_2q_l,
+#     statistic = list(all_continuous() ~ "{mean} ({sd})",
+#                      all_categorical() ~ "{n} ({p}%)"),
+#     digits = list(all_continuous() ~ 1,
+#                   all_categorical() ~ 1),
+#     missing_text = "Missing",
+#     include = !medhx_2q_l
+#   ) %>% add_p()
+# 
+# descrip_table_byheadache_bl
+# 
+# descrip_table_byheadache_1y <- vars %>% filter(eventname == "1_year_follow_up_y_arm_1") %>% 
+#     tbl_summary(
+#     by = medhx_2q_l,
+#     statistic = list(all_continuous() ~ "{mean} ({sd})",
+#                      all_categorical() ~ "{n} ({p}%)"),
+#     digits = list(all_continuous() ~ 1,
+#                   all_categorical() ~ 1),
+#     missing_text = "Missing",
+#     include = !medhx_2q_l
+#   ) %>% add_p()
+# 
+# descrip_table_byheadache_1y
+# 
+# descrip_table_byheadache_2y <- vars %>% filter(eventname == "2_year_follow_up_y_arm_1") %>% 
+#     tbl_summary(
+#     by = medhx_2q_l,
+#     statistic = list(all_continuous() ~ "{mean} ({sd})",
+#                      all_categorical() ~ "{n} ({p}%)"),
+#     digits = list(all_continuous() ~ 1,
+#                   all_categorical() ~ 1),
+#     missing_text = "Missing",
+#     include = !medhx_2q_l
+#   ) %>% add_p()
+# 
+# descrip_table_byheadache_2y
+```
+
+```{r}
+write.csv(print(CreateTableOne(vars = names(vars),
+               data = vars %>% filter(eventname == "baseline_year_1_arm_1"), 
+               strata = "medhx_2q_l", factorVars = factors, addOverall = T), missing = T), 
+          "../outputs/table1_bl.csv")
+
+write.csv(print(CreateTableOne(vars = names(vars),
+               data = vars %>% filter(eventname == "1_year_follow_up_y_arm_1"), 
+               strata = "medhx_2q_l", factorVars = factors, addOverall = T), missing = T), 
+          "../outputs/table1_1y.csv")
+
+write.csv(print(CreateTableOne(vars = names(vars),
+               data = vars %>% filter(eventname == "2_year_follow_up_y_arm_1"), 
+               strata = "medhx_2q_l", factorVars = factors, addOverall = T), missing = T), 
+          "../outputs/table1_2y.csv")
+```
+
+```{r}
+# For individual questions of bad life events # No data at baseline
+library(tableone)
+
+write.csv(print(CreateTableOne(vars = names(vars_ple %>% dplyr::select(-eventname, -medhx_2q_l)),
+               data = vars_ple %>% filter(eventname == "1_year_follow_up_y_arm_1"), strata = "medhx_2q_l")), 
+          "../outputs/table1_ple_1y.csv")
+
+write.csv(print(CreateTableOne(vars = names(vars_ple %>% dplyr::select(-eventname, -medhx_2q_l)),
+               data = vars_ple %>% filter(eventname == "2_year_follow_up_y_arm_1"), strata = "medhx_2q_l")), 
+          "../outputs/table1_ple_2y.csv")
+
+# descrip_table_byheadache_ple_1y <- vars_ple  %>% filter(eventname == "1_year_follow_up_y_arm_1") %>% 
+#     tbl_summary(
+#         by = medhx_2q_l,
+#         statistic = list(all_continuous() ~ "{mean} ({sd})",
+#                          all_categorical() ~ "{n} ({p}%)"),
+#         digits = list(all_continuous() ~ 1,
+#                       all_categorical() ~ 1),
+#         missing_text = "Missing",
+#         include = !medhx_2q_l
+#     ) %>% add_p()
+# 
+# descrip_table_byheadache_ple_1y
+# 
+# 
+# 
+# descrip_table_byheadache_ple_2y <- vars_ple  %>% filter(eventname == "2_year_follow_up_y_arm_1") %>% 
+#     tbl_summary(
+#         by = medhx_2q_l,
+#         statistic = list(all_continuous() ~ "{mean} ({sd})",
+#                          all_categorical() ~ "{n} ({p}%)"),
+#         digits = list(all_continuous() ~ 1,
+#                       all_categorical() ~ 1),
+#         missing_text = "Missing",
+#         include = !medhx_2q_l
+#     ) %>% add_p()
+# 
+# descrip_table_byheadache_ple_2y
+```
+
+# 1. Correlation matrix at each timepoint - Only select variables with significant p-values in table 1
+```{r}
+cor_plot_function <- function(vars) {
+  cor = cor_auto(vars)
+  testRes = cor.mtest(vars, conf.level = 0.95)
+  plot <- corrplot(cor, p.mat = testRes$p, method = 'color', diag = FALSE, type = 'upper', #col = col,
+         sig.level = c(0.001, 0.01, 0.05), pch.cex = 0.4,
+         insig = 'label_sig', pch.col = 'grey20', order = 'original', tl.col = "black", tl.srt = 45, tl.cex = 0.35, cl.cex = 0.4, cl.ratio = 0.4)
+  return(plot)
+}
+```
+
+```{r}
+# Variables for correlation  (significant at any time point from table 1)
+cor_vars <- dataset %>% 
+    dplyr::select(BMI, Adversity_General_Factor, any_migraine_med_2w, Birth_Pregnancy_Complications, 
+                  crpbi_y_ss_caregiver, Daily.Preventive.medications_2w, diagnosis_anxiety_y, dim_yesno_q1,                    
+                  dim_yesno_q2, dim_yesno_q4, famhx_ss_fath_prob_alc_p, famhx_ss_fath_prob_dg_p,         
+                  famhx_ss_fath_prob_dprs_p, famhx_ss_moth_prob_dg_p, famhx_ss_moth_prob_dprs_p, famhx_ss_parent_alc_p,           
+                  famhx_ss_parent_dg_p, famhx_ss_parent_dprs_p, Household_Adversity, household_income,                
+                  medhx_2h_l, medhx_6i_l, medhx_ss_6i_times_p_l, medhx_ss_6j_times_p_l, 
+                  medhx_ss_6p_times_p_l, migraine_PRS, Migraine.Medications_2w, Migraine.Medications_2w_total,   
+                  neighborhood_crime_y, neighborhood1r_p, neighborhood2r_p, neighborhood3r_p,                
+                  ple_y_ss_total_bad, Rescue.Medications_2w, Rescue.Medications_2w_total, reshist_addr1_adi_perc,          
+                  sleepdisturb1_p, sleepdisturb15_p, sleepdisturb23_p, sleepdisturb25_p, 
+                  sleepdisturb4_p, srpf_y_ss_iiss, srpf_y_ss_ses, State_Conservatism_Ruralness,   
+                  topiramate)
+```
+
+```{r}
+# Baseline
+png("../plots/correlation_bl.png", units="in", width=8, height=7, res=320)
+vars_bl <-
+  dataset %>% filter(eventname == "baseline_year_1_arm_1") %>%
+  dplyr::select(
+    all_of(names(cor_vars %>% dplyr::select(-contains("dim_yesno"), -ple_y_ss_total_bad)))
+  )
+
+cor_plot_function(vars_bl)
+dev.off()
+# 1-year
+png("../plots/correlation_1y.png", units="in", width=8, height=7, res=320)
+vars_1y <-
+  dataset %>% filter(eventname == "1_year_follow_up_y_arm_1") %>%
+  dplyr::select(
+    all_of(names(cor_vars %>% dplyr::select(-topiramate, -diagnosis_anxiety_y)))
+  )
+
+cor_plot_function(vars_1y)
+dev.off()
+# 2-year
+png("../plots/correlation_2y.png", units="in", width=8, height=7, res=320)
+vars_2y <-
+  dataset %>% filter(eventname == "2_year_follow_up_y_arm_1") %>%
+  dplyr::select(
+    all_of(names(cor_vars%>% dplyr::select(-crpbi_y_ss_caregiver))) 
+  )
+
+cor_plot_function(vars_2y)
+dev.off()
+
+# dataset %>% dplyr::select(contains(c("src", "event", "sex", "race"))) %>% View()
+
+
+# library(purrr)
+# map(vars_2y, table)
+```
+
+```{r}
+# Table 1 by eventname
+descrip_table <- vars %>% 
+  tbl_summary(
+    by = eventname,
+    statistic = list(all_continuous() ~ "{mean} ({sd})",
+                     all_categorical() ~ "{n} ({p}%)"),
+    digits = list(all_continuous() ~ 1,
+                  all_categorical() ~ 1),
+    missing_text = "Missing",
+    include = !eventname
+  )
+  # modify_header(all_stat_cols() ~ "**{level}**<br>N =  {n} ({style_percent(p)}%)") %>%
+  # bold_labels() %>%
+  # modify_spanning_header(all_stat_cols() ~ "**Wage loss**") %>% 
+  # add_p(list(all_continuous() ~ "t.test", all_categorical() ~ "chisq.test"),
+        # pvalue_fun = ~style_pvalue(.x, digits = 3))
+
+
+dataset %>% select(Household_Adversity,
+Neighborhood_Poverty,
+DayToDay_Adversity,
+Adversity_General_Factor,
+eventname) %>% 
+    tbl_summary(
+    by = eventname,
+    statistic = list(all_continuous() ~ "{mean} ({sd})",
+                     all_categorical() ~ "{n} ({p}%)"),
+    digits = list(all_continuous() ~ 3,
+                  all_categorical() ~ 3),
+    missing_text = "Missing",
+    include = !eventname
+  )
+```
+
+```{r}
+# Table 1 by headache 
+# medhx_2q_l (presence of headache)
+# severity (number of medication) Daily.Preventive.medications_2w, Rescue.Medications_2w, Migraine.Medications_2w, any_migraine_med_2w
+
+descrip_table_byheadache <- vars %>% dplyr::select(-eventname) %>% 
+    tbl_summary(
+    by = medhx_2q_l,
+    statistic = list(all_continuous() ~ "{mean} ({sd})",
+                     all_categorical() ~ "{n} ({p}%)"),
+    digits = list(all_continuous() ~ 1,
+                  all_categorical() ~ 1),
+    missing_text = "Missing",
+    include = !medhx_2q_l
+  ) %>% add_p()
+
+descrip_table_byheadache
+
+# By eventname
+descrip_table_byheadache_bl <- vars %>% filter(eventname == "baseline_year_1_arm_1") %>% 
+    tbl_summary(
+    by = medhx_2q_l,
+    statistic = list(all_continuous() ~ "{mean} ({sd})",
+                     all_categorical() ~ "{n} ({p}%)"),
+    digits = list(all_continuous() ~ 1,
+                  all_categorical() ~ 1),
+    missing_text = "Missing",
+    include = !medhx_2q_l
+  ) %>% add_p()
+
+descrip_table_byheadache_bl
+
+descrip_table_byheadache_1y <- vars %>% filter(eventname == "1_year_follow_up_y_arm_1") %>% 
+    tbl_summary(
+    by = medhx_2q_l,
+    statistic = list(all_continuous() ~ "{mean} ({sd})",
+                     all_categorical() ~ "{n} ({p}%)"),
+    digits = list(all_continuous() ~ 1,
+                  all_categorical() ~ 1),
+    missing_text = "Missing",
+    include = !medhx_2q_l
+  ) %>% add_p()
+
+descrip_table_byheadache_1y
+
+descrip_table_byheadache_2y <- vars %>% filter(eventname == "2_year_follow_up_y_arm_1") %>% 
+    tbl_summary(
+    by = medhx_2q_l,
+    statistic = list(all_continuous() ~ "{mean} ({sd})",
+                     all_categorical() ~ "{n} ({p}%)"),
+    digits = list(all_continuous() ~ 1,
+                  all_categorical() ~ 1),
+    missing_text = "Missing",
+    include = !medhx_2q_l
+  ) %>% add_p()
+
+descrip_table_byheadache_2y
+```
+
+```{r}
+descrip_table_bypreventive <- vars %>% dplyr::select(-eventname) %>% 
+    tbl_summary(
+    by = Daily.Preventive.medications_2w,
+    statistic = list(all_continuous() ~ "{mean} ({sd})",
+                     all_categorical() ~ "{n} ({p}%)"),
+    digits = list(all_continuous() ~ 1,
+                  all_categorical() ~ 1),
+    missing_text = "Missing",
+    include = !Daily.Preventive.medications_2w
+  ) %>% add_p()
+
+descrip_table_bypreventive
+
+descrip_table_bypreventive_bl <- vars %>% filter(eventname == "baseline_year_1_arm_1") %>% 
+    tbl_summary(
+    by = Daily.Preventive.medications_2w,
+    statistic = list(all_continuous() ~ "{mean} ({sd})",
+                     all_categorical() ~ "{n} ({p}%)"),
+    digits = list(all_continuous() ~ 1,
+                  all_categorical() ~ 1),
+    missing_text = "Missing",
+    include = !Daily.Preventive.medications_2w
+  ) %>% add_p()
+
+descrip_table_bypreventive_bl
+
+descrip_table_bypreventive_1y <- vars %>% filter(eventname == "1_year_follow_up_y_arm_1") %>%
+    tbl_summary(
+    by = Daily.Preventive.medications_2w,
+    statistic = list(all_continuous() ~ "{mean} ({sd})",
+                     all_categorical() ~ "{n} ({p}%)"),
+    digits = list(all_continuous() ~ 1,
+                  all_categorical() ~ 1),
+    missing_text = "Missing",
+    include = !Daily.Preventive.medications_2w
+  ) %>% add_p()
+
+descrip_table_bypreventive_1y
+
+descrip_table_bypreventive_2y <- vars %>% filter(eventname == "2_year_follow_up_y_arm_1") %>%
+    tbl_summary(
+    by = Daily.Preventive.medications_2w,
+    statistic = list(all_continuous() ~ "{mean} ({sd})",
+                     all_categorical() ~ "{n} ({p}%)"),
+    digits = list(all_continuous() ~ 1,
+                  all_categorical() ~ 1),
+    missing_text = "Missing",
+    include = !Daily.Preventive.medications_2w
+  ) %>% add_p()
+
+descrip_table_bypreventive_2y
+```
+
+```{r}
+descrip_table_byrescue <- vars %>% dplyr::select(-eventname) %>% 
+    tbl_summary(
+    by = Rescue.Medications_2w,
+    statistic = list(all_continuous() ~ "{mean} ({sd})",
+                     all_categorical() ~ "{n} ({p}%)"),
+    digits = list(all_continuous() ~ 1,
+                  all_categorical() ~ 1),
+    missing_text = "Missing",
+    include = !Rescue.Medications_2w
+  ) %>% add_p()
+
+descrip_table_byrescue
+
+descrip_table_byrescue_bl <- vars %>% filter(eventname == "baseline_year_1_arm_1") %>% 
+    tbl_summary(
+    by = Rescue.Medications_2w,
+    statistic = list(all_continuous() ~ "{mean} ({sd})",
+                     all_categorical() ~ "{n} ({p}%)"),
+    digits = list(all_continuous() ~ 1,
+                  all_categorical() ~ 1),
+    missing_text = "Missing",
+    include = !Rescue.Medications_2w
+  ) %>% add_p()
+
+descrip_table_byrescue_bl
+
+descrip_table_byrescue_1y <- vars %>% filter(eventname == "1_year_follow_up_y_arm_1") %>% 
+    tbl_summary(
+    by = Rescue.Medications_2w,
+    statistic = list(all_continuous() ~ "{mean} ({sd})",
+                     all_categorical() ~ "{n} ({p}%)"),
+    digits = list(all_continuous() ~ 1,
+                  all_categorical() ~ 1),
+    missing_text = "Missing",
+    include = !Rescue.Medications_2w
+  ) %>% add_p()
+
+descrip_table_byrescue_1y
+
+descrip_table_byrescue_2y <- vars %>% filter(eventname == "2_year_follow_up_y_arm_1") %>% 
+    tbl_summary(
+    by = Rescue.Medications_2w,
+    statistic = list(all_continuous() ~ "{mean} ({sd})",
+                     all_categorical() ~ "{n} ({p}%)"),
+    digits = list(all_continuous() ~ 1,
+                  all_categorical() ~ 1),
+    missing_text = "Missing",
+    include = !Rescue.Medications_2w
+  ) %>% add_p()
+
+descrip_table_byrescue_2y
+```
+
+```{r}
+descrip_table_bymigrain <- vars %>% dplyr::select(-eventname) %>% 
+    tbl_summary(
+    by = Migraine.Medications_2w,
+    statistic = list(all_continuous() ~ "{mean} ({sd})",
+                     all_categorical() ~ "{n} ({p}%)"),
+    digits = list(all_continuous() ~ 1,
+                  all_categorical() ~ 1),
+    missing_text = "Missing",
+    include = !Migraine.Medications_2w
+  ) %>% add_p()
+
+descrip_table_bymigrain
+
+descrip_table_bymigrain_bl <- vars %>% filter(eventname == "baseline_year_1_arm_1") %>% 
+    tbl_summary(
+    by = Migraine.Medications_2w,
+    statistic = list(all_continuous() ~ "{mean} ({sd})",
+                     all_categorical() ~ "{n} ({p}%)"),
+    digits = list(all_continuous() ~ 1,
+                  all_categorical() ~ 1),
+    missing_text = "Missing",
+    include = !Migraine.Medications_2w
+  ) %>% add_p()
+
+descrip_table_bymigrain_bl
+
+
+descrip_table_bymigrain_1y <- vars %>% filter(eventname == "1_year_follow_up_y_arm_1") %>% 
+    tbl_summary(
+    by = Migraine.Medications_2w,
+    statistic = list(all_continuous() ~ "{mean} ({sd})",
+                     all_categorical() ~ "{n} ({p}%)"),
+    digits = list(all_continuous() ~ 1,
+                  all_categorical() ~ 1),
+    missing_text = "Missing",
+    include = !Migraine.Medications_2w
+  ) %>% add_p()
+
+descrip_table_bymigrain_1y
+
+
+descrip_table_bymigrain_2y <- vars %>% filter(eventname == "2_year_follow_up_y_arm_1") %>% 
+    tbl_summary(
+    by = Migraine.Medications_2w,
+    statistic = list(all_continuous() ~ "{mean} ({sd})",
+                     all_categorical() ~ "{n} ({p}%)"),
+    digits = list(all_continuous() ~ 1,
+                  all_categorical() ~ 1),
+    missing_text = "Missing",
+    include = !Migraine.Medications_2w
+  ) %>% add_p()
+
+descrip_table_bymigrain_2y
+```
+
+```{r}
+descrip_table_byanymigrain <- vars %>% dplyr::select(-eventname) %>% 
+    tbl_summary(
+    by = any_migraine_med_2w,
+    statistic = list(all_continuous() ~ "{mean} ({sd})",
+                     all_categorical() ~ "{n} ({p}%)"),
+    digits = list(all_continuous() ~ 1,
+                  all_categorical() ~ 1),
+    missing_text = "Missing",
+    include = !any_migraine_med_2w
+  ) %>% add_p()
+
+descrip_table_byanymigrain
+
+descrip_table_byanymigrain_bl <- vars %>% filter(eventname == "baseline_year_1_arm_1") %>% 
+    tbl_summary(
+    by = any_migraine_med_2w,
+    statistic = list(all_continuous() ~ "{mean} ({sd})",
+                     all_categorical() ~ "{n} ({p}%)"),
+    digits = list(all_continuous() ~ 1,
+                  all_categorical() ~ 1),
+    missing_text = "Missing",
+    include = !any_migraine_med_2w
+  ) %>% add_p()
+
+descrip_table_byanymigrain_bl
+
+descrip_table_byanymigrain_1y <- vars %>% filter(eventname == "1_year_follow_up_y_arm_1") %>% 
+    tbl_summary(
+    by = any_migraine_med_2w,
+    statistic = list(all_continuous() ~ "{mean} ({sd})",
+                     all_categorical() ~ "{n} ({p}%)"),
+    digits = list(all_continuous() ~ 1,
+                  all_categorical() ~ 1),
+    missing_text = "Missing",
+    include = !any_migraine_med_2w
+  ) %>% add_p()
+
+descrip_table_byanymigrain_1y
+
+descrip_table_byanymigrain_2y <- vars %>% filter(eventname == "2_year_follow_up_y_arm_1") %>% 
+    tbl_summary(
+    by = any_migraine_med_2w,
+    statistic = list(all_continuous() ~ "{mean} ({sd})",
+                     all_categorical() ~ "{n} ({p}%)"),
+    digits = list(all_continuous() ~ 1,
+                  all_categorical() ~ 1),
+    missing_text = "Missing",
+    include = !any_migraine_med_2w
+  ) %>% add_p()
+
+descrip_table_byanymigrain_2y
+```
+
+
+
+
+
+
+
+
+

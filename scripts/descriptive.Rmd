@@ -14,6 +14,11 @@ library(dplyr)
 library(tableone)
 library(qgraph)
 library(corrplot)
+library(purrr)
+library(lme4)
+library(sjPlot)
+library(parameters)
+library(readxl)
 ```
 
 ```{r}
@@ -76,7 +81,6 @@ vars <- dataset %>%
         # macv_y_ss_r,	#	Religion: mean
         
         # Negative life events
-        fes_y_ss_fc, # Family Conflict Questionnaire
         ple_y_ss_total_bad,
         peq_ss_relational_victim,
         peq_ss_reputation_aggs,
@@ -277,29 +281,26 @@ get_est <- function(outcome = "medhx_2q_l", predictor, variables = var_headache_
 }
 
 # Resource intensive --> Divide into smaller groups/steps
-univariate_headache_1to30 <- vars[1:30] %>%  map_dfr(~get_est(predictor = .x))
+univariate_headache_2to30 <- vars[2:30] %>%  map_dfr(~get_est(predictor = .x)) # 1 is eventname
 univariate_headache_31to60 <- vars[31:60] %>%  map_dfr(~get_est(predictor = .x))
 univariate_headache_61to90 <- vars[61:90] %>%  map_dfr(~get_est(predictor = .x))
-univariate_headache_91to120 <- vars[91:120] %>%  map_dfr(~get_est(predictor = .x))
-univariate_headache_121to145 <- vars[121:length(vars)] %>%  map_dfr(~get_est(predictor = .x))
+univariate_headache_91toall <- vars[91:length(vars)] %>%  map_dfr(~get_est(predictor = .x))
 
 # Write the results to make sure R's not crashed
-# writexl::write_xlsx(univariate_headache_1to30, "../outputs/univariate_headache_1to30_080922.xlsx")
-# writexl::write_xlsx(univariate_headache_31to60, "../outputs/univariate_headache_31to60_080922.xlsx")
-# writexl::write_xlsx(univariate_headache_61to90, "../outputs/univariate_headache_61to90_080922.xlsx")
-# writexl::write_xlsx(univariate_headache_91to120, "../outputs/univariate_headache_91to120_080922.xlsx")
-# writexl::write_xlsx(univariate_headache_121toall, "../outputs/univariate_headache_121toall_080922.xlsx")
+writexl::write_xlsx(univariate_headache_2to30, "../outputs/univariate_headache_2to30_080922.xlsx")
+writexl::write_xlsx(univariate_headache_31to60, "../outputs/univariate_headache_31to60_080922.xlsx")
+writexl::write_xlsx(univariate_headache_61to90, "../outputs/univariate_headache_61to90_080922.xlsx")
+writexl::write_xlsx(univariate_headache_91toall, "../outputs/univariate_headache_91toall_080922.xlsx")
 
-univariate_headache_all <- univariate_headache_1to30 %>%
+univariate_headache_all <- univariate_headache_2to30 %>%
     bind_rows(univariate_headache_31to60) %>%
     bind_rows(univariate_headache_61to90) %>%
-    bind_rows(univariate_headache_91to120) %>%
-    bind_rows(univariate_headache_121toall)
+    bind_rows(univariate_headache_91toall)
 
 # # Get the definition of the variables in univariate_headache_all
-dictionary <- read_xlsx("../data/headache_dictionary_08092022v2.xlsx", sheet = 1) %>%
+dictionary <- read_xlsx("../data/headache_dictionary_08012022v2.xlsx", sheet = 1) %>%
     filter(element_name %in% vars) %>%
-    select(variable = element_name, element_description)
+    dplyr::select(variable = element_name, element_description)
 
 univariate_headache_all <- univariate_headache_all %>%
     left_join(dictionary) %>%

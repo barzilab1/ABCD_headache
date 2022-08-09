@@ -135,14 +135,8 @@ factors <- dataset %>%
 
 # 1. Description of headache and medication by eventname
 ```{r}
-# vars1 <- dataset %>% dplyr::select(
-# # Headache problems
-#         medhx_2h_l, # Epilepsy or Seizures
-#         medhx_2q_l,	# Very Bad Headaches
-#         medhx_6i_l,	# Head Injury
-#         medhx_6j_l,	# Knocked Unconscious
-# contains(c("Migraine", "Daily.Preventive", "Rescue.Medications")), headache_severity_cat) %>% names()
-write.csv(print(CreateTableOne(data = dataset %>% mutate(eventname = factor(eventname, c("baseline_year_1_arm_1", "1_year_follow_up_y_arm_1", "2_year_follow_up_y_arm_1"))), 
+write.csv(print(CreateTableOne(data = dataset %>% 
+                                   mutate(eventname = factor(eventname, c("baseline_year_1_arm_1", "1_year_follow_up_y_arm_1", "2_year_follow_up_y_arm_1"))), 
                                vars = c("medhx_2h_l", "medhx_2q_l", "medhx_6i_l", 
                                         "medhx_6j_l", "Migraine.Medications_2w", "any_migraine_med_2w", 
                                         "Daily.Preventive.medications_2w", "Rescue.Medications_2w", "headache_severity_cat"),
@@ -170,9 +164,6 @@ write.csv(print(CreateTableOne(vars = vars,
                strata = "medhx_2q_l", factorVars = factors, addOverall = T), missing = T), 
           "../outputs/table1_2y.csv")
 ```
-
-
-
 
 
 # Correlation matrix at each timepoint - Only select variables with significant p-values in table 1
@@ -215,6 +206,7 @@ vars_bl <-
 
 cor_plot_function(vars_bl)
 dev.off()
+
 # 1-year
 png("../plots/correlation_1y.png", units="in", width=8, height=7, res=320)
 vars_1y <-
@@ -225,6 +217,7 @@ vars_1y <-
 
 cor_plot_function(vars_1y)
 dev.off()
+
 # 2-year
 png("../plots/correlation_2y.png", units="in", width=8, height=7, res=320)
 vars_2y <-
@@ -237,8 +230,83 @@ cor_plot_function(vars_2y)
 dev.off()
 ```
 
+# Exploratory mixed models
+## Model function
+```{r}
+# Outcome: headache 
+var_headache_0 <- "(1 | site_id_l_br/rel_family_id/src_subject_id)"
+
+# var_headache_1 <- c(
+#     "scale(age)", "(scale(age)^2)", "sex_br", "race_white",
+#     "race_black", "ethnicity_hisp", "scale(household_income)",
+#     "(1 | site_id_l_br/rel_family_id/src_subject_id)"
+# )
 
 
+models <- function(outcome, predictor, variables, var_added) {
+  if (is.null(var_added)) {
+    model <- as.formula(paste0(outcome, " ~", paste0(c(
+      predictor, variables
+    ), collapse = " + "), sep = ""))
+  } else {
+    model <- as.formula(paste0(outcome, " ~", paste0(
+      c(predictor, variables, var_added), collapse = " + "
+    ), sep = ""))
+  }
+  return(model)
+}
+```
+
+## Function to extract ORs and p-values
+```{r}
+# No covariates in all models
+# Use var_headache_1 if want to check results with covariates
+output <- data.frame("variable" = NA, "Odds ratio" = NA, "p_value" = NA)
+output_list <- list()
+get_est <- function(outcome = "medhx_2q_l", predictor, variables = var_headache_0, var_added = NULL, data = dataset) {
+    model <- tryCatch(glmer(models(outcome = outcome, predictor = predictor, variables = variables, var_added = NULL), 
+                  family = binomial, data = dataset, nAGQ = 0), error = function(e) "Notrun")
+    p_value <- c()
+    coef <- c()         
+    p_value <- tryCatch(p_value(model)[2,2], error = function(e) "NA")
+    coef <- tryCatch(summary(model)$coefficients[2,1], error = function(e) "NA")
+    output[,1] <- tryCatch(predictor, error = function(e) "NA")
+    output[,2] <- tryCatch(exp(coef), error = function(e) 99999)
+    output[,3] <- tryCatch(round(p_value, 5), error = function(e) 99999)
+    return(output)
+}
+
+# Resource intensive --> Divide into smaller groups/steps
+univariate_headache_1to30 <- vars[1:30] %>%  map_dfr(~get_est(predictor = .x))
+univariate_headache_31to60 <- vars[31:60] %>%  map_dfr(~get_est(predictor = .x))
+univariate_headache_61to90 <- vars[61:90] %>%  map_dfr(~get_est(predictor = .x))
+univariate_headache_91to120 <- vars[91:120] %>%  map_dfr(~get_est(predictor = .x))
+univariate_headache_121to145 <- vars[121:length(vars)] %>%  map_dfr(~get_est(predictor = .x))
+
+# Write the results to make sure R's not crashed
+# writexl::write_xlsx(univariate_headache_1to30, "../outputs/univariate_headache_1to30_080922.xlsx")
+# writexl::write_xlsx(univariate_headache_31to60, "../outputs/univariate_headache_31to60_080922.xlsx")
+# writexl::write_xlsx(univariate_headache_61to90, "../outputs/univariate_headache_61to90_080922.xlsx")
+# writexl::write_xlsx(univariate_headache_91to120, "../outputs/univariate_headache_91to120_080922.xlsx")
+# writexl::write_xlsx(univariate_headache_121toall, "../outputs/univariate_headache_121toall_080922.xlsx")
+
+univariate_headache_all <- univariate_headache_1to30 %>%
+    bind_rows(univariate_headache_31to60) %>%
+    bind_rows(univariate_headache_61to90) %>%
+    bind_rows(univariate_headache_91to120) %>%
+    bind_rows(univariate_headache_121toall)
+
+# # Get the definition of the variables in univariate_headache_all
+dictionary <- read_xlsx("../data/headache_dictionary_08092022v2.xlsx", sheet = 1) %>%
+    filter(element_name %in% vars) %>%
+    select(variable = element_name, element_description)
+
+univariate_headache_all <- univariate_headache_all %>%
+    left_join(dictionary) %>%
+    select(variable, element_description, `Odds.ratio`, p_value)
+
+writexl::write_xlsx(univariate_headache_all, "../outputs/univariate_headache_all_08092022.xlsx")
+```
 
 
 

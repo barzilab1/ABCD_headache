@@ -110,7 +110,7 @@ vars <- dataset %>%
         medhx_2q_l,	# Very Bad Headaches
         medhx_6i_l,	# Head Injury
         medhx_6j_l,	# Knocked Unconscious
-        contains("tbi"),
+        contains("tbi") & !contains("worst"), tbi_ss_worst_overall_l,
         
         # Medical history
         medhx_ss_6i_times_p_l,
@@ -118,14 +118,16 @@ vars <- dataset %>%
         medhx_ss_6p_times_p_l,
         
         # Medication
-        contains(c("Migraine", "Daily.Preventive", "Rescue.Medications", "topiramate")), headache_severity_cat,
+        contains(c("Migraine", "Daily.Preventive", "Rescue.Medications")), headache_severity_cat,
     ) %>% names()
+
+dataset <- dataset %>% mutate(age_years = interview_age/12)
 ```
 
 ```{r}
 factors <- dataset %>% 
-    dplyr::select(contains(c("famhx_ss_moth", "famhx_ss_fath", "cybb", "90_q", "tbi", "topiramate")), 
-                  starts_with("medhx_") & !contains("time"), ends_with(c("_2w", "_1yr"))) %>% names()
+    dplyr::select(contains(c("famhx_ss_moth", "famhx_ss_fath", "cybb", "90_q", "tbi", "topiramate")) & !contains("agefirst"), 
+                  starts_with("medhx_") & !contains("time"), ends_with(c("_2w", "_1yr", "_fu_y"))) %>% names()
 ```
 
 # Get description for table 1
@@ -141,14 +143,25 @@ factors <- dataset %>%
 ```{r}
 write.csv(print(CreateTableOne(data = dataset %>% 
                                    mutate(eventname = factor(eventname, c("baseline_year_1_arm_1", "1_year_follow_up_y_arm_1", "2_year_follow_up_y_arm_1"))), 
-                               vars = c("medhx_2h_l", "medhx_2q_l", "medhx_6i_l", 
+                               vars = c("age_years", "sex_br", "race_white", "race_black", "ethnicity_hisp",
+                                        "medhx_2h_l", "medhx_2q_l", "medhx_6i_l", 
                                         "medhx_6j_l", "Migraine.Medications_2w", "any_migraine_med_2w", 
                                         "Daily.Preventive.medications_2w", "Rescue.Medications_2w", "headache_severity_cat"),
-                               strata = "eventname", factorVars = c("medhx_2h_l", "medhx_2q_l", "medhx_6i_l", 
+                               strata = "eventname", factorVars = c("sex_br", "race_white", "race_black", "ethnicity_hisp",
+                                                                    "medhx_2h_l", "medhx_2q_l", "medhx_6i_l", 
                                                                     "medhx_6j_l", "Migraine.Medications_2w", "any_migraine_med_2w", 
                                                                     "Daily.Preventive.medications_2w", "Rescue.Medications_2w", "headache_severity_cat"),
-                               includeNA = T)),
+                               includeNA = T),
+                pDigits = 5),
           "../outputs/table1_byevent.csv")
+
+# Get adjusted p values
+p_values <- "../outputs/table1_byevent.xlsx" %>% read_excel(sheet = 2)
+
+p_values <- p_values %>%
+  mutate(adj_p = round(p.adjust(p, method = "fdr", ), 3))
+
+writexl::write_xlsx(p_values, "../outputs/table1_adjp_081222.xlsx")
 ```
 
 # 2. Table 1 by headache eventname
@@ -286,11 +299,11 @@ univariate_headache_31to60 <- vars[31:60] %>%  map_dfr(~get_est(predictor = .x))
 univariate_headache_61to90 <- vars[61:90] %>%  map_dfr(~get_est(predictor = .x))
 univariate_headache_91toall <- vars[91:length(vars)] %>%  map_dfr(~get_est(predictor = .x))
 
-# Write the results to make sure R's not crashed
-writexl::write_xlsx(univariate_headache_2to30, "../outputs/univariate_headache_2to30_080922.xlsx")
-writexl::write_xlsx(univariate_headache_31to60, "../outputs/univariate_headache_31to60_080922.xlsx")
-writexl::write_xlsx(univariate_headache_61to90, "../outputs/univariate_headache_61to90_080922.xlsx")
-writexl::write_xlsx(univariate_headache_91toall, "../outputs/univariate_headache_91toall_080922.xlsx")
+# Write the results to make sure it's save in case R's crashed
+# writexl::write_xlsx(univariate_headache_2to30, "../outputs/univariate_headache_2to30_080922.xlsx")
+# writexl::write_xlsx(univariate_headache_31to60, "../outputs/univariate_headache_31to60_080922.xlsx")
+# writexl::write_xlsx(univariate_headache_61to90, "../outputs/univariate_headache_61to90_080922.xlsx")
+# writexl::write_xlsx(univariate_headache_91toall, "../outputs/univariate_headache_91toall_080922.xlsx")
 
 univariate_headache_all <- univariate_headache_2to30 %>%
     bind_rows(univariate_headache_31to60) %>%
@@ -298,7 +311,7 @@ univariate_headache_all <- univariate_headache_2to30 %>%
     bind_rows(univariate_headache_91toall)
 
 # # Get the definition of the variables in univariate_headache_all
-dictionary <- read_xlsx("../data/headache_dictionary_08012022v2.xlsx", sheet = 1) %>%
+dictionary <- read_xlsx("../data/headache_dictionary_08122022.xlsx", sheet = 1) %>%
     filter(element_name %in% vars) %>%
     dplyr::select(variable = element_name, element_description)
 
@@ -306,7 +319,7 @@ univariate_headache_all <- univariate_headache_all %>%
     left_join(dictionary) %>%
     select(variable, element_description, `Odds.ratio`, p_value)
 
-writexl::write_xlsx(univariate_headache_all, "../outputs/univariate_headache_all_08092022.xlsx")
+writexl::write_xlsx(univariate_headache_all, "../outputs/univariate_headache_all_08132022.xlsx")
 ```
 
 

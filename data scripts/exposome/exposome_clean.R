@@ -45,6 +45,10 @@ fhxssp01[fhxssp01 == -1 | fhxssp01 == -2] <- NA
 
 ########### Youth Life Events ###########
 yle01 = load_instrument("abcd_yle01",abcd_files_path)
+# Choose the variables
+yle01 = yle01[, grepl("src|interview|event|sex|_fu_y$", colnames(yle01))]
+# 6 and 7 will be NA
+yle01[yle01 == 6 | yle01 == 7] <- NA
 
 summary(droplevels(yle01[yle01$eventname == "1_year_follow_up_y_arm_1",]))
 

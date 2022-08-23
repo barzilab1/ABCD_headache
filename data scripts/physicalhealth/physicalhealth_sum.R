@@ -1,4 +1,4 @@
-library(plyr)
+library(dplyr)
 
 source("config.R")
 source("utility_fun.R")
@@ -49,9 +49,30 @@ lssmh01 = lssmh01[,grepl("src|interview|event|medhx_ss_6[i|j|p]_times_p_l",colna
 
 
 
-physicalhealth_sum = rbind.fill(medhxss01, lssmh01)
+
+
+
+########### ABCD Sum Scores Traumatic Brain Injury ###########
+tbi01 = load_instrument("abcd_tbi01", abcd_files_path)
+tbi01 = tbi01[,!grepl("_nm",colnames(tbi01))]
+tbi01 = tbi01 %>% rename_with(., ~ paste(.x, "_l", sep = ""), .cols = contains(c("tbi_ss_nt", "agefirst", "overall")))
+
+########### ABCD Longitudinal Summary Scores Traumatic Brain Injury  ###########
+lsstbi01 = load_instrument("abcd_lsstbi01", abcd_files_path)
+lsstbi01 = lsstbi01[,!grepl("_nm",colnames(lsstbi01))]
+
+
+
+
+physicalhealth_sum = bind_rows(medhxss01, lssmh01)
+tbi = bind_rows(tbi01, lsstbi01)
 physicalhealth_sum = merge(physicalhealth_sum, ssphp01)
 physicalhealth_sum = merge(physicalhealth_sum, ssphy01)
+physicalhealth_sum = merge(physicalhealth_sum, tbi)
 write.csv(file = "outputs/physicalhealth_sum.csv",x = physicalhealth_sum, row.names = F, na = "")
+
+
+
+
 
 

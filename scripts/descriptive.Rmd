@@ -12,314 +12,405 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r}
 library(dplyr)
 library(tableone)
-library(qgraph)
-library(corrplot)
+# library(qgraph)
+# library(corrplot)
 library(purrr)
-library(lme4)
+# library(lme4)
 library(sjPlot)
-library(parameters)
-library(readxl)
+library(parameters) # to get p-values of glmer
+# library(readxl)
+library(stringr)
+library(MatchIt)
+# library(broom.mixed)
+
+source("../utility_fun.R")
 ```
 
 ```{r}
-dataset <- read.csv("../outputs/dataset_long.csv")
+data_wide <- read.csv("../outputs/dataset_wide.csv")
+data_long <- read.csv("../outputs/dataset_long.csv")
+
+matched_data <- read.table(file = '../data/participants.tsv', header = TRUE)
+matched_data <- matched_data %>% 
+    mutate(participant_id = str_replace_all(participant_id, "sub-", ""),
+           participant_id = str_replace_all(participant_id, "NDAR", "NDAR_"))
+
+# Create bad/good ple variables
+data_long <- data_long %>% 
+    mutate(across(contains("fu_"), ~case_when(.x == 2 ~ 1, .x == 1 ~ 0, TRUE ~ NA_real_), .names = "{col}_bad"))
+    # mutate(across(matches("fu_y$"), ~case_when(.x == 1 ~ 1, .x == 2 ~ 0, TRUE ~ NA_real_), .names = "{col}_good")) 
 ```
 
 ```{r}
-vars <- dataset %>% 
-    dplyr::select(
-        eventname,
-        household_income,
-        BMI,
-        
-        # Family History Questionnaire
-        famhx_ss_fath_prob_alc_p,
-        famhx_ss_moth_prob_alc_p,
-        famhx_ss_parent_alc_p,
-        famhx_ss_fath_prob_dg_p,
-        famhx_ss_moth_prob_dg_p,
-        famhx_ss_parent_dg_p,
-        famhx_ss_fath_prob_dprs_p,
-        famhx_ss_moth_prob_dprs_p,
-        famhx_ss_parent_dprs_p,
-        # Discrimination
-        dim_yesno_q1, dim_yesno_q2, dim_yesno_q3, dim_yesno_q4,
-        # Bullying/Cyberbullying
-        cybb_phenx_harm, cybb_phenx_harm2, bully_vic, bully_aggs, bully_aggs_90_q, bully_vic_90_q,
-        # Hormone
-        hormone_scr_dhea_mean, hormone_scr_hse_mean, hormone_scr_ert_mean,
-        
-        # Neighborhood information
-        neighborhood_crime_y,	# 	My neighborhood is safe from crime.
-        neighborhood1r_p,	# 	I feel safe walking in my neighborhood, day or night. 
-        neighborhood2r_p,	# 	Violence is not a problem in my neighborhood.
-        neighborhood3r_p,	# 	My neighborhood is safe from crime. 
-        ## ADI
-        reshist_addr1_adi_perc,
-        
-        # Exposome
-        Household_Adversity,
-        Neighborhood_Poverty,
-        DayToDay_Adversity,
-        State_Conservatism_Ruralness,
-        Family_Values,
-        Birth_Pregnancy_Complications,
-        Adversity_General_Factor,
-        sai_total_activities, # Total sport activity
-        
-        
-        pmq_y_ss_mean, # Parental Monitoring
-        fes_y_ss_fc, #Conflict Subscale from the Family Environment Scale Sum of Youth Report (RAW Score)
-        crpbi_y_ss_parent,# CRPBI - Acceptance Subscale Mean of Report by Parent Completing Protocol by youth
-        crpbi_y_ss_caregiver, # CRPBI - Acceptance Subscale Mean of Report by Secondary Caregiver by youth
-        srpf_y_ss_ses,	#	SRPF School Environment Subscale
-        srpf_y_ss_iiss,	#	SRPF School Involvement Subscale, Sum
-        srpf_y_ss_dfs,	#	SRPF School Disengagement Subscale, Sum
-        dim_y_ss_mean,	#	Discrimination Measure mean 
-        macv_y_ss_fs,	#	Family Support Sum Score mean
-        # macv_y_ss_isr,	#	Independence/Self Reliance: mean
-        # macv_y_ss_r,	#	Religion: mean
-        
-        # Negative life events
-        ple_y_ss_total_bad,
-        peq_ss_relational_victim,
-        peq_ss_reputation_aggs,
-        peq_ss_reputation_victim,
-        peq_ss_overt_aggression,
-        peq_ss_overt_victim,
-        peq_ss_relational_aggs,
-        
-        ## individual questions from bad life events
-        
-        ple_died_fu_y, ple_injured_fu_y, ple_crime_fu_y, ple_friend_fu_y, ple_friend_injur_fu_y, ple_financial_fu_y, ple_sud_fu_y, ple_ill_fu_y, ple_injur_fu_y,
-        ple_argue_fu_y, ple_job_fu_y, ple_away_fu_y, ple_arrest_fu_y, ple_friend_died_fu_y, ple_mh_fu_y, ple_sib_fu_y, ple_victim_fu_y, ple_separ_fu_y, ple_law_fu_y,
-        ple_school_fu_y, ple_move_fu_y, ple_jail_fu_y, ple_step_fu_y, ple_new_job_fu_y, ple_new_sib_fu_y,
-        
-        # mental health diagnosis
-        diagnosis_depression_y, diagnosis_anxiety_y, diagnosis_sleep_y, diagnosis_anxiety_y,
-        
-        # Sleep problems
-        sleepdisturb1_p,	#	How many hours of sleep does your child get on most nights?
-        sleepdisturb4_p,	#	The child has difficulty getting to sleep at night.
-        sleepdisturb15_p,	#	The child snores.
-        sleepdisturb23_p,	#	The child awakes in the morning feeling tired.
-        sleepdisturb25_p,	#	The child experiences daytime sleepiness.
-        
-        # Headache problems
-        medhx_2h_l, # Epilepsy or Seizures
-        medhx_2q_l,	# Very Bad Headaches
-        medhx_6i_l,	# Head Injury
-        medhx_6j_l,	# Knocked Unconscious
-        contains("tbi") & !contains("worst"), tbi_ss_worst_overall_l,
-        
-        # Medical history
-        medhx_ss_6i_times_p_l,
-        medhx_ss_6j_times_p_l,
-        medhx_ss_6p_times_p_l,
-        
-        # Medication
-        contains(c("Migraine", "Daily.Preventive", "Rescue.Medications")), headache_severity_cat,
-    ) %>% names()
+# table 1: by headache ever
+table1_var <- data_wide %>% 
+    select(matches(c("age_years__2y", "sex_br", "race", "ethnicity", "income$", "edu$"))) %>% names()
+                # "head_injury_ever", "knocked_unconsc_ever",
 
-dataset <- dataset %>% mutate(age_years = interview_age/12)
+table1_factor <- table1_var[!table1_var %in% c("age_years__2y", "household_income", "parents_avg_edu")]
+
+
+write.csv(print(
+  CreateTableOne(
+    data = data_wide,
+    vars = table1_var,
+    strata = "headache_ever",
+    factorVars = table1_factor,
+    includeNA = T,
+    addOverall = T
+  ),
+    missing = T,
+  pDigits = 5
+),
+"../outputs/table1_main_values_101322.csv")
+
+
+# FDR-adjusted p-values
+table1_adj_p = round(p.adjust(c(0.00293, 0.66945, 0.00001, 0.00001, 0.00002, 0.81631, 0.64358, 0.09838, 0.00009, 0.00789, 0.00001, 0.00001), method = "fdr"), 3)
+
+
+
+# create migraine PRS among Euro ancestry (white)
+# don't have PRS among African ancestry
+data_wide <- data_wide %>% 
+    mutate(migraine_PRS_EUR = case_when(genetic_afr == 0 ~ migraine_PRS,
+                                          TRUE ~ NA_real_))
+# table 2: internal validation # by headache
+table2_var <- c("migraine_med_2w_ever", "daily_med_2w_ever", "rescue_med_2w_ever", "migraine_PRS_EUR")
+table2_factor <- table2_var[!table2_var %in% "migraine_PRS_EUR"]
+
+write.csv(print(
+  CreateTableOne(
+    data = data_wide,
+    vars = table2_var,
+    strata = "headache_ever",
+    factorVars = table2_factor,
+    includeNA = T,
+    addOverall = T
+  ),
+    missing = T,
+  pDigits = 5
+),
+"../outputs/table2_main_values_101322.csv")
+
+table2_adj_p <- round(p.adjust(c(0.00001, 0.00001, 0.00001, 0.00001), method = "fdr"), 3)
 ```
 
 ```{r}
-factors <- dataset %>% 
-    dplyr::select(contains(c("famhx_ss_moth", "famhx_ss_fath", "cybb", "90_q", "tbi", "topiramate")) & !contains("agefirst"), 
-                  starts_with("medhx_") & !contains("time"), ends_with(c("_2w", "_1yr", "_fu_y"))) %>% names()
-```
+# table 2: verification headache and medication/PRS
+data_long <- data_long %>% 
+    mutate(migraine_PRS_EUR = case_when(genetic_afr == 0 ~ migraine_PRS,
+                                          TRUE ~ NA_real_))
 
-# Get description for table 1
-```{r}
-# dictionary <- readxl::read_excel("~/Documents/KateTran_Github/ABCD_headache/materials/headache_dictionary_05032022.xlsx") %>% 
-#     filter(element_name %in% all_of(names(vars))) %>% 
-#     dplyr::select(element_name, element_description, value_range, notes)
-# 
-# write.csv(file = "../outputs/table1_dictionary.csv", x = dictionary, row.names = F, na = "")
-```
+mod_headache_med1 <- glmer(data = data_long, 
+                           medhx_2q_l~Migraine.Medications_2w + scale(age_years) + sex_br + race_black + race_white + ethnicity_hisp + household_income +
+                               (1 | site_id_l_br/rel_family_id/src_subject_id), family = binomial, nAGQ = 0)
 
-# 1. Description of headache and medication by eventname
-```{r}
-write.csv(print(CreateTableOne(data = dataset %>% 
-                                   mutate(eventname = factor(eventname, c("baseline_year_1_arm_1", "1_year_follow_up_y_arm_1", "2_year_follow_up_y_arm_1"))), 
-                               vars = c("age_years", "sex_br", "race_white", "race_black", "ethnicity_hisp",
-                                        "medhx_2h_l", "medhx_2q_l", "medhx_6i_l", 
-                                        "medhx_6j_l", "Migraine.Medications_2w", "any_migraine_med_2w", 
-                                        "Daily.Preventive.medications_2w", "Rescue.Medications_2w", "headache_severity_cat"),
-                               strata = "eventname", factorVars = c("sex_br", "race_white", "race_black", "ethnicity_hisp",
-                                                                    "medhx_2h_l", "medhx_2q_l", "medhx_6i_l", 
-                                                                    "medhx_6j_l", "Migraine.Medications_2w", "any_migraine_med_2w", 
-                                                                    "Daily.Preventive.medications_2w", "Rescue.Medications_2w", "headache_severity_cat"),
-                               includeNA = T),
-                pDigits = 5),
-          "../outputs/table1_byevent.csv")
+mod_headache_med2 <- glmer(data = data_long, 
+                           medhx_2q_l~Daily.Preventive.medications_2w + scale(age_years) + sex_br + race_black + race_white + ethnicity_hisp + household_income +
+                               (1 | site_id_l_br/rel_family_id/src_subject_id), family = binomial, nAGQ = 0)
 
-# Get adjusted p values
-p_values <- "../outputs/table1_byevent.xlsx" %>% read_excel(sheet = 2)
+mod_headache_med3 <- glmer(data = data_long, 
+                           medhx_2q_l~Rescue.Medications_2w + scale(age_years) + sex_br + race_black + race_white + ethnicity_hisp + household_income +
+                               (1 | site_id_l_br/rel_family_id/src_subject_id), family = binomial, nAGQ = 0)
 
-p_values <- p_values %>%
-  mutate(adj_p = round(p.adjust(p, method = "fdr", ), 3))
+mod_headache_prs <- glmer(data = data_long, 
+                           medhx_2q_l~migraine_PRS_EUR + scale(age_years) + sex_br + race_black + race_white + ethnicity_hisp + household_income +
+                               (1 | site_id_l_br/rel_family_id/src_subject_id), family = binomial, nAGQ = 0)
 
-writexl::write_xlsx(p_values, "../outputs/table1_adjp_081222.xlsx")
-```
-
-# 2. Table 1 by headache eventname
-```{r}
-write.csv(print(CreateTableOne(vars = vars,
-               data = dataset %>% filter(eventname == "baseline_year_1_arm_1"), 
-               strata = "medhx_2q_l", factorVars = factors, addOverall = T), missing = T), 
-          "../outputs/table1_bl.csv")
-
-write.csv(print(CreateTableOne(vars = vars,
-               data = dataset %>% filter(eventname == "1_year_follow_up_y_arm_1"), 
-               strata = "medhx_2q_l", factorVars = factors, addOverall = T), missing = T), 
-          "../outputs/table1_1y.csv")
-
-write.csv(print(CreateTableOne(vars = vars,
-               data = dataset %>% filter(eventname == "2_year_follow_up_y_arm_1"), 
-               strata = "medhx_2q_l", factorVars = factors, addOverall = T), missing = T), 
-          "../outputs/table1_2y.csv")
-```
-
-
-# Correlation matrix at each timepoint - Only select variables with significant p-values in table 1
-```{r}
-cor_plot_function <- function(vars) {
-  cor = cor_auto(vars)
-  testRes = cor.mtest(vars, conf.level = 0.95)
-  plot <- corrplot(cor, p.mat = testRes$p, method = 'color', diag = FALSE, type = 'upper', #col = col,
-         sig.level = c(0.001, 0.01, 0.05), pch.cex = 0.4,
-         insig = 'label_sig', pch.col = 'grey20', order = 'original', tl.col = "black", tl.srt = 45, tl.cex = 0.35, cl.cex = 0.4, cl.ratio = 0.4)
-  return(plot)
-}
+tab_model(mod_headache_med1, mod_headache_med2, mod_headache_med3, mod_headache_prs, show.intercept = F)
 ```
 
 ```{r}
-# Variables for correlation  (significant at any time point from table 1)
-cor_vars <- dataset %>% 
-    dplyr::select(BMI, Adversity_General_Factor, any_migraine_med_2w, Birth_Pregnancy_Complications, 
-                  crpbi_y_ss_caregiver, Daily.Preventive.medications_2w, diagnosis_anxiety_y, dim_yesno_q1,                    
-                  dim_yesno_q2, dim_yesno_q4, famhx_ss_fath_prob_alc_p, famhx_ss_fath_prob_dg_p,         
-                  famhx_ss_fath_prob_dprs_p, famhx_ss_moth_prob_dg_p, famhx_ss_moth_prob_dprs_p, famhx_ss_parent_alc_p,           
-                  famhx_ss_parent_dg_p, famhx_ss_parent_dprs_p, Household_Adversity, household_income,                
-                  medhx_2h_l, medhx_6i_l, medhx_ss_6i_times_p_l, medhx_ss_6j_times_p_l, 
-                  medhx_ss_6p_times_p_l, migraine_PRS, Migraine.Medications_2w, Migraine.Medications_2w_total,   
-                  neighborhood_crime_y, neighborhood1r_p, neighborhood2r_p, neighborhood3r_p,                
-                  ple_y_ss_total_bad, Rescue.Medications_2w, Rescue.Medications_2w_total, reshist_addr1_adi_perc,          
-                  sleepdisturb1_p, sleepdisturb15_p, sleepdisturb23_p, sleepdisturb25_p, 
-                  sleepdisturb4_p, srpf_y_ss_iiss, srpf_y_ss_ses, State_Conservatism_Ruralness,   
-                  topiramate)
-```
+# Table 3/Forest plots
+## Create 2 different datasets, run univariate models on the first half
 
-```{r}
-# Baseline
-png("../plots/correlation_bl.png", units="in", width=8, height=7, res=320)
-vars_bl <-
-  dataset %>% filter(eventname == "baseline_year_1_arm_1") %>%
-  dplyr::select(
-    all_of(names(cor_vars %>% dplyr::select(-contains("dim_yesno"), -ple_y_ss_total_bad)))
-  )
 
-cor_plot_function(vars_bl)
-dev.off()
+# Get IDs of participants in group 1
+id_gr1 <- matched_data %>% filter(matched_group == 1) %>% select(participant_id) %>% pull()
+id_gr2 <- matched_data %>% filter(matched_group == 2) %>% select(participant_id) %>% pull()
 
-# 1-year
-png("../plots/correlation_1y.png", units="in", width=8, height=7, res=320)
-vars_1y <-
-  dataset %>% filter(eventname == "1_year_follow_up_y_arm_1") %>%
-  dplyr::select(
-    all_of(names(cor_vars %>% dplyr::select(-topiramate, -diagnosis_anxiety_y)))
-  )
+# Create ABCD dataset 1 & 2
+abcd_gr1 <- data_long %>% filter(src_subject_id %in% id_gr1) %>%
+    # Create a group id
+    mutate(matched_group = 0)
+abcd_gr2 <- data_long %>% filter(src_subject_id %in% id_gr2) %>% 
+    mutate(matched_group = 1)
 
-cor_plot_function(vars_1y)
-dev.off()
 
-# 2-year
-png("../plots/correlation_2y.png", units="in", width=8, height=7, res=320)
-vars_2y <-
-  dataset %>% filter(eventname == "2_year_follow_up_y_arm_1") %>%
-  dplyr::select(
-    all_of(names(cor_vars%>% dplyr::select(-crpbi_y_ss_caregiver))) 
-  )
-
-cor_plot_function(vars_2y)
-dev.off()
-```
-
-# Exploratory mixed models
-## Model function
-```{r}
-# Outcome: headache 
-var_headache_0 <- "(1 | site_id_l_br/rel_family_id/src_subject_id)"
-
-# var_headache_1 <- c(
-#     "scale(age)", "(scale(age)^2)", "sex_br", "race_white",
-#     "race_black", "ethnicity_hisp", "scale(household_income)",
-#     "(1 | site_id_l_br/rel_family_id/src_subject_id)"
+## On longitudinal data
+# match1 <- matchit(
+#     matched_group ~ medhx_2q_l,
+#     data = abcd %>% filter(!is.na(matched_group) & !is.na(medhx_2q_l)),
+#     method = "exact",
+#     distance = "glm"
 # )
 
+# summary(match1)
+## On baseline data
+# match2 <- matchit(
+#     matched_group ~ medhx_2q_l,
+#     data = abcd %>% filter(eventname == "baseline_year_1_arm_1") %>% filter(!is.na(matched_group) & !is.na(medhx_2q_l)),
+#     method = "exact",
+#     distance = "glm"
+# )
+# 
+# summary(match2) # improved a little bit
 
-models <- function(outcome, predictor, variables, var_added) {
-  if (is.null(var_added)) {
-    model <- as.formula(paste0(outcome, " ~", paste0(c(
-      predictor, variables
-    ), collapse = " + "), sep = ""))
-  } else {
-    model <- as.formula(paste0(outcome, " ~", paste0(
-      c(predictor, variables, var_added), collapse = " + "
-    ), sep = ""))
-  }
-  return(model)
-}
+# Merge the data
+## Longitudinal
+# abcd_match1 <- match.data(match1)
+## At baseline
+# abcd_match2 <- match.data(match2)
+
+# Check headache prevalence of headache in each data
+## Longitudinal
+prop.table(table(abcd_gr1$medhx_2q_l)) #0.03764922
+prop.table(table(abcd_gr2$medhx_2q_l)) #0.04119611
+
+## At baseline
+prop.table(table(abcd_gr1$medhx_2q_l[abcd_gr1$eventname == "baseline_year_1_arm_1"])) #0.0466805
+prop.table(table(abcd_gr2$medhx_2q_l[abcd_gr2$eventname == "baseline_year_1_arm_1"])) #0.04720733
 ```
 
-## Function to extract ORs and p-values
 ```{r}
-# No covariates in all models
-# Use var_headache_1 if want to check results with covariates
-output <- data.frame("variable" = NA, "Odds ratio" = NA, "p_value" = NA)
-output_list <- list()
-get_est <- function(outcome = "medhx_2q_l", predictor, variables = var_headache_0, var_added = NULL, data = dataset) {
-    model <- tryCatch(glmer(models(outcome = outcome, predictor = predictor, variables = variables, var_added = NULL), 
-                  family = binomial, data = dataset, nAGQ = 0), error = function(e) "Notrun")
-    p_value <- c()
-    coef <- c()         
-    p_value <- tryCatch(p_value(model)[2,2], error = function(e) "NA")
-    coef <- tryCatch(summary(model)$coefficients[2,1], error = function(e) "NA")
-    output[,1] <- tryCatch(predictor, error = function(e) "NA")
-    output[,2] <- tryCatch(exp(coef), error = function(e) 99999)
-    output[,3] <- tryCatch(round(p_value, 5), error = function(e) 99999)
-    return(output)
-}
+# Run univariate models on the first half of the data: abcd_gr1
+vars <- data_long %>% 
+    dplyr::select(matches(c("eventn|d_inc|famhx_ss_[fmp]|dim_y|harm(2?)$|bully|hood(_?)[^_P]|nsc|adi|pmq|fes_y.*_fc$|crpbi|srpf|macv_y.*fs|ple.*[^fu]_(y|bad)$|hx.*[26][qij]|tbi|cat$"))) %>% names()
+vars
+length(vars)
 
-# Resource intensive --> Divide into smaller groups/steps
-univariate_headache_2to30 <- vars[2:30] %>%  map_dfr(~get_est(predictor = .x)) # 1 is eventname
-univariate_headache_31to60 <- vars[31:60] %>%  map_dfr(~get_est(predictor = .x))
-univariate_headache_61to90 <- vars[61:90] %>%  map_dfr(~get_est(predictor = .x))
-univariate_headache_91toall <- vars[91:length(vars)] %>%  map_dfr(~get_est(predictor = .x))
+data_long %>% dplyr::select(matches("ple.*[^fu]_(y|bad)$")) %>% names()
 
-# Write the results to make sure it's save in case R's crashed
-# writexl::write_xlsx(univariate_headache_2to30, "../outputs/univariate_headache_2to30_080922.xlsx")
-# writexl::write_xlsx(univariate_headache_31to60, "../outputs/univariate_headache_31to60_080922.xlsx")
-# writexl::write_xlsx(univariate_headache_61to90, "../outputs/univariate_headache_61to90_080922.xlsx")
-# writexl::write_xlsx(univariate_headache_91toall, "../outputs/univariate_headache_91toall_080922.xlsx")
+vars <- vars[!vars %in% c("ple_y_ss_total_number", "ple_y_ss_affect_sum", "ple_y_ss_affected_good_sum", "ple_y_ss_affected_good_mean",
+                          "ple_y_ss_affected_bad_sum", "ple_y_ss_affected_bad_mean")]
+```
 
-univariate_headache_all <- univariate_headache_2to30 %>%
+```{r}
+# Run univariate on the 1st half of the dataset only
+
+
+# check: model nnot work!!!
+
+var_headache_0 <- "(1 | site_id_l_br/rel_family_id/src_subject_id)"
+
+
+output <- data.frame("variable" = NA, "Odds ratio" = NA, "p_value" = NA, "std.error" = NA, "low_ci" = NA, "high_ci" = NA)
+# output_list <- list()
+
+        
+# predictor <- c("BMI", "ple_y_ss_total_bad", "Adversity_General_Factor")
+# get_est(outcome = "medhx_2q_l", predictor = "BMI", variables = var_headache_0, var_added = NULL, data = dataset)
+
+# predictor %>%  map_dfr(~get_est(predictor = .x))
+# univariate_headache_ple <- vars_ple %>%  map_dfr(~get_est(predictor = .x))
+# writexl::write_xlsx(univariate_headache_ple, "../outputs/univariate_headache_ple.xlsx")
+
+# univariate_headache <- vars_ple %>%  map_dfr(~get_est(predictor = .x))
+univariate_headache_1to30 <- vars[2:30] %>%  map_dfr(~get_est(predictor = .x, data = abcd_gr1, estimate = "OR", output = output))
+univariate_headache_31to60 <- vars[31:60] %>%  map_dfr(~get_est(predictor = .x, data = abcd_gr1, estimate = "OR", output = output))
+univariate_headache_61to90 <- vars[61:90] %>%  map_dfr(~get_est(predictor = .x, data = abcd_gr1, estimate = "OR", output = output))
+univariate_headache_91to120 <- vars[91:120] %>%  map_dfr(~get_est(predictor = .x, data = abcd_gr1, estimate = "OR", output = output))
+univariate_headache_121toall <- vars[121:length(vars)] %>%  map_dfr(~get_est(predictor = .x, data = abcd_gr1, estimate = "OR", output = output))
+
+# saveRDS(univariate_headache_1to30, file = "../outputs/univariate_headache_1to30_abcd.rds")
+# saveRDS(univariate_headache_31to60, file = "../outputs/univariate_headache_31to60_abcd.rds")
+# saveRDS(univariate_headache_61to90, file = "../outputs/univariate_headache_61to90_abcd.rds")
+# saveRDS(univariate_headache_91to120, file = "../outputs/univariate_headache_91to120_abcd.rds")
+# saveRDS(univariate_headache_121toall, file = "../outputs/univariate_headache_121toall_abcd.rds")
+
+univariate_headache_all <- univariate_headache_1to30 %>%
     bind_rows(univariate_headache_31to60) %>%
     bind_rows(univariate_headache_61to90) %>%
-    bind_rows(univariate_headache_91toall)
+    bind_rows(univariate_headache_91to120) %>% 
+    bind_rows(univariate_headache_121toall)
 
+# saveRDS(univariate_headache_all, file = "../outputs/univariate_headache_plot_101022.rds")
+
+
+# Significant (p-value <= 0.1)
+univariate_headache_all <- univariate_headache_all %>% 
+    mutate(significant = case_when(p_value <= 0.1 ~ "sig", TRUE ~ NA_character_))
+
+# 
 # # Get the definition of the variables in univariate_headache_all
-dictionary <- read_xlsx("../data/headache_dictionary_08122022.xlsx", sheet = 1) %>%
+dictionary <- readxl::read_xlsx("../data/headache_dictionary_08012022v2.xlsx", sheet = 1) %>%
     filter(element_name %in% vars) %>%
-    dplyr::select(variable = element_name, element_description)
+    select(variable = element_name, element_description)
 
 univariate_headache_all <- univariate_headache_all %>%
     left_join(dictionary) %>%
-    select(variable, element_description, `Odds.ratio`, p_value)
+    select(variable, element_description, `Odds.ratio`, p_value, significant)
 
-writexl::write_xlsx(univariate_headache_all, "../outputs/univariate_headache_all_08132022.xlsx")
+# writexl::write_xlsx(univariate_headache_all, "../outputs/univariate_headache_all_101122_abcd.xlsx")
+# univariate_headache_all <- readxl::read_excel("../outputs/univariate_headache_all_101122_abcd.xlsx")
+```
+
+```{r}
+output_plot <- data.frame("variable" = NA, "coef" = NA, "p_value" = NA, "std.error" = NA, "low_ci" = NA, "high_ci" = NA)
+
+# data for forest plot
+univariate_headache_1to30 <- vars[2:30] %>%  map_dfr(~get_est(predictor = .x, data = abcd_gr1, estimate = "coef", output = output_plot))
+univariate_headache_31to60 <- vars[31:60] %>%  map_dfr(~get_est(predictor = .x, data = abcd_gr1, estimate = "coef", output = output_plot))
+univariate_headache_61to90 <- vars[61:90] %>%  map_dfr(~get_est(predictor = .x, data = abcd_gr1, estimate = "coef", output = output_plot))
+univariate_headache_91to120 <- vars[91:120] %>%  map_dfr(~get_est(predictor = .x, data = abcd_gr1, estimate = "coef", output = output_plot))
+univariate_headache_121toall <- vars[121:length(vars)] %>%  map_dfr(~get_est(predictor = .x, data = abcd_gr1, estimate = "coef", output = output_plot))
+
+# saveRDS(univariate_headache_1to30, file = "../outputs/univariate_headache_1to30_abcd.rds")
+# saveRDS(univariate_headache_31to60, file = "../outputs/univariate_headache_31to60_abcd.rds")
+# saveRDS(univariate_headache_61to90, file = "../outputs/univariate_headache_61to90_abcd.rds")
+# saveRDS(univariate_headache_91to120, file = "../outputs/univariate_headache_91to120_abcd.rds")
+# saveRDS(univariate_headache_121toall, file = "../outputs/univariate_headache_121toall_abcd.rds")
+
+univariate_headache_plot <- univariate_headache_1to30 %>%
+    bind_rows(univariate_headache_31to60) %>%
+    bind_rows(univariate_headache_61to90) %>%
+    bind_rows(univariate_headache_91to120) %>% 
+    bind_rows(univariate_headache_121toall)
+
+# saveRDS(univariate_headache_plot, file = "../outputs/univariate_headache_plot_coef_101022.rds")
+```
+
+```{r}
+# Choose significant elements
+sig_vars <- univariate_headache_all %>% filter(significant == "sig") %>% select(variable) %>% pull()
+```
+
+```{r}
+png("../plots/correlation_abcdgrp1_bl.png", units="in", width=6, height=5, res=320)
+vars_bl <-
+  data_long %>% filter(eventname == "baseline_year_1_arm_1") %>%
+  dplyr::select(
+    `household income` = household_income,
+    `head injury (times)` = medhx_ss_6i_times_p_l,
+    `knocked unconscious (times)` = medhx_ss_6j_times_p_l,
+    `worst TBI` = tbi_ss_worst_overall_l,
+    `head injury` = medhx_6i_l,
+    `hospitalized head/neck injury` = tbi_1, #tbi only at baseline
+    `head/neck injury fall/hit` = tbi_3,
+    `multiple impacts to head` = tbi_7a, #`discrimination - race` = dim_yesno_q1,
+    `DHEA hormone` = hormone_scr_dhea_mean,
+    `safe from crime neighborhood` = neighborhood3r_p,
+    `father alcohol problem` = famhx_ss_fath_prob_alc_p,
+    `mother alcohol problem` = famhx_ss_moth_prob_alc_p,
+    `parent alcohol problem` = famhx_ss_parent_alc_p,
+    `father drug use problem` = famhx_ss_fath_prob_dg_p,
+    `mother drug use problem` = famhx_ss_moth_prob_dg_p,
+    `parent drug use problem` = famhx_ss_parent_dg_p,
+    `father depression problem` = famhx_ss_fath_prob_dprs_p,
+    `mother depression problem` = famhx_ss_moth_prob_dprs_p,
+    `parent depression problem` = famhx_ss_parent_dprs_p,
+    ADI = reshist_addr1_adi_perc # largest - 0.51
+  )
+
+cor_plot(vars_bl)
+dev.off()
+```
+
+```{r}
+# correlation plot
+png("../plots/correlation_abcdgrp1_1y.png", units="in", width=6, height=5, res=320)
+vars_1y <-
+  data_long %>% filter(eventname == "1_year_follow_up_y_arm_1") %>%
+  dplyr::select(
+    `household income` = household_income,
+    `head injury (times)` = medhx_ss_6i_times_p_l,
+    `knocked unconscious (times)` = medhx_ss_6j_times_p_l,
+    `worst TBI` = tbi_ss_worst_overall_l,
+    `head injury` = medhx_6i_l,
+    `discrimination - race` = dim_yesno_q1,
+    `DHEA hormone` = hormone_scr_dhea_mean,
+    `safe from crime neighborhood` = neighborhood3r_p,
+    `father alcohol problem` = famhx_ss_fath_prob_alc_p,
+    `mother alcohol problem` = famhx_ss_moth_prob_alc_p,
+    `parent alcohol problem` = famhx_ss_parent_alc_p,
+    `father drug use problem` = famhx_ss_fath_prob_dg_p,
+    `mother drug use problem` = famhx_ss_moth_prob_dg_p,
+    `parent drug use problem` = famhx_ss_parent_dg_p,
+    `father depression problem` = famhx_ss_fath_prob_dprs_p,
+    `mother depression problem` = famhx_ss_moth_prob_dprs_p,
+    `parent depression problem` = famhx_ss_parent_dprs_p,
+    `you - seriously sick` = ple_ill_y,
+    `family - arrested` = ple_arrest_y,
+    `parents separated/divorced` = ple_separ_y,
+    `parents - trouble with law` = ple_law_y,
+    `parents - went to jail` = ple_jail_y, 
+    `total good events` = ple_y_ss_total_good,
+    ADI = reshist_addr1_adi_perc #-0.48
+  )
+
+cor_plot(vars_1y)
+dev.off()
+```
+
+```{r}
+png("../plots/correlation_abcdgrp1_2y.png", units="in", width=6, height=5, res=320)
+vars_2y <-
+  data_long %>% filter(eventname == "2_year_follow_up_y_arm_1") %>%
+  dplyr::select(
+    `household income` = household_income,
+    `head injury (times)` = medhx_ss_6i_times_p_l,
+    `knocked unconscious (times)` = medhx_ss_6j_times_p_l,
+    `worst TBI` = tbi_ss_worst_overall_l,
+    `head injury` = medhx_6i_l,
+    `discrimination - race` = dim_yesno_q1,
+    `DHEA hormone` = hormone_scr_dhea_mean,
+    `safe from crime neighborhood` = neighborhood3r_p,
+    `father alcohol problem` = famhx_ss_fath_prob_alc_p,
+    `mother alcohol problem` = famhx_ss_moth_prob_alc_p,
+    `parent alcohol problem` = famhx_ss_parent_alc_p,
+    `father drug use problem` = famhx_ss_fath_prob_dg_p,
+    `mother drug use problem` = famhx_ss_moth_prob_dg_p,
+    `parent drug use problem` = famhx_ss_parent_dg_p,
+    `father depression problem` = famhx_ss_fath_prob_dprs_p,
+    `mother depression problem` = famhx_ss_moth_prob_dprs_p,
+    `parent depression problem` = famhx_ss_parent_dprs_p,
+    `you - seriously sick` = ple_ill_y,
+    `family - arrested` = ple_arrest_y,
+    `parents separated/divorced` = ple_separ_y,
+    `parents - trouble with law` = ple_law_y,
+    `parents - went to jail` = ple_jail_y, 
+    `total good events` = ple_y_ss_total_good,
+    ADI = reshist_addr1_adi_perc #-0.76
+  )
+
+cor_plot(vars_2y)
+dev.off()
+```
+
+
+```{r}
+# Run the logistic regression of significant variables on the second half of the data
+output_testing <- data.frame("variable" = NA, "coef" = NA, "p_value" = NA, "std.error" = NA, "low_ci" = NA, "high_ci" = NA)
+
+univariate_testing <- sig_vars %>%  map_dfr(~get_est(predictor = .x, data = abcd_gr2, estimate = "coef", output = output_testing))
+# saveRDS(univariate_testing, file = "../outputs/univariate_testing_abcdgr2.rds")
+
+# Coefficients are the weight of each exposure
+# Calculate weighted sum of exposure scores on abcd_gr2
+# QUESTION: WHAT TO DO WITH NON-BINARY VARIABLES? CANNOT SUM THEM TOGETHER
+weight <- univariate_testing %>% select(coef) %>% pull()
+
+# Need to binarize continuous variables
+
+# Calculate weighted sum of exposures
+abcd_gr2_weight <- transform(abcd_gr2, weighted_exposome = rowSums(sweep(abcd_gr2[, c(which(names(abcd_gr2) %in% sig_vars))], 2, weight, `*`), na.rm = T))
+```
+
+```{r}
+# Create forest plot of univariate models
+library(ggforestplot)
+
+
+```
+
+```{r}
+# Run models between headache and weighted_exposome
+```
+
+# Supplement
+```{r}
+# Table S1: compare data of non-missing and missing data of headache in table 1
 ```
 
 

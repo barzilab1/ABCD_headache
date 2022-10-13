@@ -16,10 +16,10 @@ summary(droplevels(sscey01))
 
 
 ########### Sum Scores Culture & Environment Parent ###########
-# sscep = load_instrument("abcd_sscep01",abcd_files_path)
+sscep = load_instrument("abcd_sscep01",abcd_files_path)
 
 #remove nt (Number Total Questions) and nm (Number Missing Answers) and na (Number Answered)
-# sscep = sscep[,!grepl("_(nm|nt|na|answered)$",colnames(sscep))]
+sscep = sscep[,!grepl("_(nm|nt|na|answered)$",colnames(sscep))]
 
 
 ########### Sum Scores Mobil Tech Youth ###########
@@ -44,6 +44,7 @@ summary(droplevels(lsssa))
 
 ########### merge all tables
 exposome_sum_set = merge(sscey01, ssmty)
+exposome_sum_set = merge(exposome_sum_set, sscep, all.x = T)
 exposome_sum_set = merge(exposome_sum_set, lsssa, all.x = T)
 
 write.csv(file = "outputs/exposome_sum_set.csv",x = exposome_sum_set, row.names = F, na = "")

@@ -8,11 +8,11 @@ demographics_long <- read_csv("outputs/demographics_long.csv")
 medications <- read_csv("outputs/medications.csv", col_types = cols(.default = "d", src_subject_id = "c", eventname = "c",))
 physicalhealth_sum <- read_csv("outputs/physicalhealth_sum.csv")
 physicalhealth <- read_csv("outputs/physicalhealth.csv") %>% dplyr::select(-sex)
-hormone_saliva <- read_csv("outputs/hormone_saliva.csv")
+# hormone_saliva <- read_csv("outputs/hormone_saliva.csv")
 family_id <- read_csv("outputs/family_id.csv") %>% select(src_subject_id, rel_family_id)
 exposome_set <- read_csv("outputs/exposome_set.csv")
 exposome_sum_set <- read_csv("outputs/exposome_sum_set.csv")
-ABCD_BMI <- read_csv("outputs/ABCD_BMI.csv")
+# ABCD_BMI <- read_csv("outputs/ABCD_BMI.csv")
 psychopathology <- read_csv("outputs/psychopathology.csv")
 psychopathology_sum_scores <- read_csv("outputs/psychopathology_sum_scores.csv")
 site <- read_csv("outputs/site.csv")
@@ -20,7 +20,7 @@ geo_data <- read_csv("outputs/geo_data.csv")
 e_factor <- read_csv(paste0(e_factor_files_path, "ABCD_Exposome_bifactor_scores_16March2021.csv"))
 e_factor$src_subject_id = paste0("NDAR_", e_factor$ID)
 e_factor$ID <- NULL
-genetics <- read_csv(paste0(genetic_files_path, "genetic.csv")) %>% dplyr::select(src_subject_id, migraine_PRS)
+genetics <- read_csv(paste0(genetic_files_path, "genetic.csv")) %>% dplyr::select(src_subject_id, migraine_PRS, genetic_afr)
 ksad_y_diagnosis <- read_csv("outputs/ksad_y_diagnosis.csv")
 
 # suicide_set <- read_csv("outputs/suicide_set.csv")
@@ -48,7 +48,7 @@ dataset = merge(dataset, hormone_saliva, all.x = T)
 dataset = merge(dataset, family_id, all.x = T)
 dataset = merge(dataset, exposome_set, all.x = T)
 dataset = merge(dataset, exposome_sum_set, all.x = T)
-dataset = merge(dataset, ABCD_BMI, all.x = T)
+# dataset = merge(dataset, ABCD_BMI, all.x = T)
 dataset = merge(dataset, psychopathology, all.x = T)
 dataset = merge(dataset, psychopathology_sum_scores, all.x = T)
 dataset = merge(dataset, ksad_y_diagnosis, all.x = T)
@@ -68,10 +68,14 @@ dataset <- dataset %>%
             medhx_2q_l == 1 & Migraine.Medications_2w == 1 ~ 3,
             medhx_2q_l == 1 & Daily.Preventive.medications_2w == 1 ~ 4,
             TRUE ~ NA_real_
-        )
+        ),
+        age_years = interview_age/12
     ) %>%
     janitor::remove_empty("cols")
 
+# Only use data at baseline, 1-year and 2-year
+dataset <- dataset %>%
+    filter(eventname != "3_year_follow_up_y_arm_1")
 
 write.csv(file = "outputs/dataset_long.csv", x = dataset, row.names = F, na = "")
 

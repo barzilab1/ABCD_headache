@@ -51,10 +51,10 @@ source("utility_fun.R")
 
 
 ########## Parent Sleep Disturbance Scale for Children (SDS) ###########
-sds01 = load_instrument("abcd_sds01",abcd_files_path)
+# sds01 = load_instrument("abcd_sds01",abcd_files_path)
 
 #select variables
-sds01 = sds01[,grepl("src|interview|event|sex|sleepdisturb1_p",colnames(sds01))]
+# sds01 = sds01[,grepl("src|interview|event|sex|sleepdisturb1_p",colnames(sds01))]
 
 
 ########## Parent Diagnostic Interview for DSM-5 Background Items Full (KSAD) ###########
@@ -69,5 +69,5 @@ sds01 = sds01[,grepl("src|interview|event|sex|sleepdisturb1_p",colnames(sds01))]
 
 # psychopathology = merge(pps01,pgbi01)
 
-write.csv(file = "outputs/psychopathology.csv",x = sds01, row.names = F, na = "")
+# write.csv(file = "outputs/psychopathology.csv",x = sds01, row.names = F, na = "")
 

@@ -85,6 +85,7 @@ for(i in 13:ncol(tagged_med)){
 
 }
 
+# med_dataset <- med_dataset[, grepl("src|age|Mig|Dai|Res", colnames(med_dataset))]
 
 write.csv(file = paste0("outputs/medications.csv"),x = med_dataset ,row.names=F, na = "")
 

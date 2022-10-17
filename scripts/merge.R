@@ -13,7 +13,7 @@ family_id <- read_csv("outputs/family_id.csv") %>% select(src_subject_id, rel_fa
 exposome_set <- read_csv("outputs/exposome_set.csv")
 exposome_sum_set <- read_csv("outputs/exposome_sum_set.csv")
 # ABCD_BMI <- read_csv("outputs/ABCD_BMI.csv")
-psychopathology <- read_csv("outputs/psychopathology.csv")
+# psychopathology <- read_csv("outputs/psychopathology.csv")
 psychopathology_sum_scores <- read_csv("outputs/psychopathology_sum_scores.csv")
 site <- read_csv("outputs/site.csv")
 geo_data <- read_csv("outputs/geo_data.csv")
@@ -21,7 +21,7 @@ e_factor <- read_csv(paste0(e_factor_files_path, "ABCD_Exposome_bifactor_scores_
 e_factor$src_subject_id = paste0("NDAR_", e_factor$ID)
 e_factor$ID <- NULL
 genetics <- read_csv(paste0(genetic_files_path, "genetic.csv")) %>% dplyr::select(src_subject_id, migraine_PRS, genetic_afr)
-ksad_y_diagnosis <- read_csv("outputs/ksad_y_diagnosis.csv")
+# ksad_y_diagnosis <- read_csv("outputs/ksad_y_diagnosis.csv")
 
 # suicide_set <- read_csv("outputs/suicide_set.csv")
 
@@ -35,7 +35,7 @@ demographics = rbind.fill(demographics_baseline, demographics_long)
 
 
 # define headaches medications
-medications = medications[,grep("src|inter|event|Migraine|Daily.Preventive|Rescue.Medications|topiramate", colnames(medications))]
+medications = medications[,grep("src|inter|event|Migraine|Daily.Preventive|Rescue.Medications", colnames(medications))]
 medications$any_migraine_med_2w = Reduce("|",medications[,c("Migraine.Medications_2w", "Daily.Preventive.medications_2w", "Rescue.Medications_2w")])*1
 medications$any_migraine_med_1yr = Reduce("|",medications[,c("Migraine.Medications_1yr", "Daily.Preventive.medications_1yr", "Rescue.Medications_1yr")])*1
 
@@ -44,31 +44,31 @@ medications$any_migraine_med_1yr = Reduce("|",medications[,c("Migraine.Medicatio
 dataset = merge(demographics, medications, all.x = T)
 dataset = merge(dataset, physicalhealth_sum, all.x = T)
 dataset = merge(dataset, physicalhealth, all.x = T)
-dataset = merge(dataset, hormone_saliva, all.x = T)
+# dataset = merge(dataset, hormone_saliva, all.x = T)
 dataset = merge(dataset, family_id, all.x = T)
 dataset = merge(dataset, exposome_set, all.x = T)
 dataset = merge(dataset, exposome_sum_set, all.x = T)
 # dataset = merge(dataset, ABCD_BMI, all.x = T)
-dataset = merge(dataset, psychopathology, all.x = T)
+# dataset = merge(dataset, psychopathology, all.x = T)
 dataset = merge(dataset, psychopathology_sum_scores, all.x = T)
-dataset = merge(dataset, ksad_y_diagnosis, all.x = T)
+# dataset = merge(dataset, ksad_y_diagnosis, all.x = T)
 dataset = merge(dataset, e_factor, all.x = T)
 dataset = merge(dataset, genetics, all.x = T)
 dataset = merge(dataset, site, all.x = T)
 dataset = merge(dataset, geo_data, all.x = T)
 # dataset = merge(dataset, suicide_set)
-
+dataset = janitor::remove_empty(dataset, "cols")
 # Create new variables
 dataset <- dataset %>%
     mutate(
-        headache_severity_cat = case_when(
-            medhx_2q_l == 0 & any_migraine_med_2w == 0 ~ 0,
-            medhx_2q_l == 1 & any_migraine_med_2w == 0 ~ 1,
-            medhx_2q_l == 1 & Rescue.Medications_2w == 1 ~ 2,
-            medhx_2q_l == 1 & Migraine.Medications_2w == 1 ~ 3,
-            medhx_2q_l == 1 & Daily.Preventive.medications_2w == 1 ~ 4,
-            TRUE ~ NA_real_
-        ),
+        # headache_severity_cat = case_when(
+        #     medhx_2q_l == 0 & any_migraine_med_2w == 0 ~ 0,
+        #     medhx_2q_l == 1 & any_migraine_med_2w == 0 ~ 1,
+        #     medhx_2q_l == 1 & Rescue.Medications_2w == 1 ~ 2,
+        #     medhx_2q_l == 1 & Migraine.Medications_2w == 1 ~ 3,
+        #     medhx_2q_l == 1 & Daily.Preventive.medications_2w == 1 ~ 4,
+        #     TRUE ~ NA_real_
+        # ),
         age_years = interview_age/12
     ) %>%
     janitor::remove_empty("cols")
@@ -78,8 +78,6 @@ dataset <- dataset %>%
     filter(eventname != "3_year_follow_up_y_arm_1")
 
 write.csv(file = "outputs/dataset_long.csv", x = dataset, row.names = F, na = "")
-
-
 
 
 

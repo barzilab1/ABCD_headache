@@ -27,18 +27,6 @@ source("../utility_fun.R")
 ```{r}
 data_wide <- read.csv("../outputs/dataset_wide.csv")
 data_long <- read.csv("../outputs/dataset_long.csv")
-
-# matched_data <- read.table(file = '../data/participants.tsv', header = TRUE)
-# matched_data <- matched_data %>% 
-#     mutate(participant_id = str_replace_all(participant_id, "sub-", ""),
-#            participant_id = str_replace_all(participant_id, "NDAR", "NDAR_"))
-# 
-
-
-data_wide <- data_wide %>% 
-    mutate(migraine_PRS_EUR = case_when(genetic_afr == 0 ~ migraine_PRS,
-                                          TRUE ~ NA_real_),
-           fam_under_poverty_line = case_when(household_income <= 4 ~ 1, household_income >= 6 ~ 0, TRUE ~ NA_real_))
 ```
 
 ```{r}

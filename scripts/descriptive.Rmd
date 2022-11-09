@@ -1,5 +1,5 @@
 ---
-title: "Untitled"
+title: "Create descriptive tables"
 author: "Kate Tran"
 date: "7/7/2022"
 output: html_document
@@ -32,54 +32,60 @@ data_long <- read.csv("../outputs/dataset_long.csv")
 ```{r}
 # table 1: by headache ever
 table1_var <- data_wide %>% 
-    select(matches(c("age_years__2y", "sex_br", "race", "ethnicity", "poverty_line$", "edu$"))) %>% names()
+    select(matches(c("age_years__2y", "sex_br", "race", "ethnicity", "poverty_line$", "edu$"))) %>% 
+    names()
 
 table1_factor <- table1_var[!table1_var %in% c("age_years__2y", "parents_avg_edu")]
 
 
-write.csv(print(
-  CreateTableOne(
-    data = data_wide,
-    vars = table1_var,
-    strata = "headache_ever",
-    factorVars = table1_factor,
-    includeNA = T,
-    addOverall = T
-  ),
-    missing = T,
-  pDigits = 5,
-  catDigits = 2,
-  contDigits = 2
-),
-"../outputs/table1_main_values_110722.csv")
+write.csv(
+    print(
+        CreateTableOne(
+            data = data_wide,
+            vars = table1_var,
+            strata = "headache_ever",
+            factorVars = table1_factor,
+            includeNA = T,
+            addOverall = T
+        ),
+        missing = T,
+        pDigits = 5,
+        catDigits = 2,
+        contDigits = 2
+    ),
+    "../outputs/table1_main_values_110722.csv"
+)
 
 
 # FDR-adjusted p-values
-table1_adj_p = round(p.adjust(c(0.00293, 0.66945, 0.00001, 0.00001, 0.00002, 0.81631, 0.64358, 0.09838, 0.00009, 0.00789, 0.00001), method = "fdr"), 3)
+table1_adj_p <- round(p.adjust(c(0.00293, 0.66945, 0.00001, 0.00001, 0.00002, 0.81631, 0.64358, 0.09838, 0.00009, 0.00789, 0.00001), method = "fdr"), 3)
 
 
 # create migraine PRS among Euro ancestry (white)
 # don't have PRS among African ancestry
+```
 
+```{r}
 # table 2: internal validation # by headache
 table2_var <- c("daily_med_2w_ever", "rescue_med_2w_ever") #, "migraine_PRS_EUR"
-# table2_factor <- table2_var[!table2_var %in% "migraine_PRS_EUR"]
 
-write.csv(print(
-  CreateTableOne(
-    data = data_wide,
-    vars = table2_var,
-    strata = "headache_ever",
-    factorVars = table2_var,
-    includeNA = T,
-    addOverall = T
-  ),
-    missing = T,
-  pDigits = 5,
-  catDigits = 2,
-  contDigits = 2
-),
-"../outputs/table2_main_values_110722.csv")
+write.csv(
+    print(
+        CreateTableOne(
+            data = data_wide,
+            vars = table2_var,
+            strata = "headache_ever",
+            factorVars = table2_var,
+            includeNA = T,
+            addOverall = T
+        ),
+        missing = T,
+        pDigits = 5,
+        catDigits = 2,
+        contDigits = 2
+    ),
+    "../outputs/table2_main_values_110722.csv"
+)
 
 table2_adj_p <- round(p.adjust(c(0.00001, 0.00001), method = "fdr"), 3)
 
@@ -94,61 +100,65 @@ data_wide <- data_wide %>%
     mutate(headache_missing = case_when(is.na(headache_ever) ~ "Missing", TRUE ~ "Not missing"))
 
 tableS3_var <- data_wide %>% 
-    select(matches("age_years__2y|sex_br|race|ethnicity|poverty_line$|edu$|daily_med_2w_ever|rescue_med_2w_ever|PRS")) %>% names()
+    select(matches("age_years__2y|sex_br|race|ethnicity|poverty_line$|edu$|daily_med_2w_ever|rescue_med_2w_ever|PRS")) %>% 
+    names()
 
-# tableS3_factor <- tableS3_var[!tableS3_var %in% c("age_years__2y", "parents_avg_edu", "migraine_PRS")]
 
-
-write.csv(print(
-  CreateTableOne(
-    data = data_wide,
-    vars = tableS3_var,
-    strata = "headache_missing",
-    factorVars = c("sex_br", "race_white", "race_black", "race_aian", "race_nhpi", "race_asian", "race_other", 
-                   "race_mixed", "ethnicity_hisp", "daily_med_2w_ever", "rescue_med_2w_ever"),
-    includeNA = T,
-    addOverall = T
-  ),
-    missing = F,
-  pDigits = 5,
-  catDigits = 2,
-  contDigits = 2
-),
-"../outputs/tableS3_main_values_110922.csv")
+write.csv(
+    print(
+        CreateTableOne(
+            data = data_wide,
+            vars = tableS3_var,
+            strata = "headache_missing",
+            factorVars = c(
+                "sex_br",
+                "race_white",
+                "race_black",
+                "race_aian",
+                "race_nhpi",
+                "race_asian",
+                "race_other",
+                "race_mixed",
+                "ethnicity_hisp",
+                "daily_med_2w_ever",
+                "rescue_med_2w_ever"
+            ),
+            includeNA = T,
+            addOverall = T
+        ),
+        missing = F,
+        pDigits = 5,
+        catDigits = 2,
+        contDigits = 2
+    ),
+    "../outputs/tableS3_main_values_110922.csv"
+)
 
 # FDR-adjusted p-values
-tableS3_adj_p = round(p.adjust(c(0.74085, 0.00001, 0.00001, 0.36898, 0.60990, 0.72167, 0.00001, 0.82726, 0.00001, 0.92661, 0.03992, 0.00001, 0.00004, 0.00001), method = "fdr"), 3)
+tableS3_adj_p <- round(p.adjust(c(0.74085, 0.00001, 0.00001, 0.36898, 0.60990, 0.72167, 0.00001, 0.82726, 0.00001, 0.92661, 0.03992, 0.00001, 0.00004, 0.00001), method = "fdr"), 3)
 ```
 
 ```{r}
 # eTable 4: internal validation headache and medication/PRS
 mod_headache_med1 <- glmer(data = data_long, 
-                           medhx_2q_l~Migraine.Medications_2w + scale(age_years) + scale(age_years)^2 + scale(age_years)^3 + sex_br + race_black + race_white + ethnicity_hisp + household_income +
+                           medhx_2q_l~Migraine.Medications_2w + scale(age_years) + scale(age_years)^2 + scale(age_years)^3 + 
+                               sex_br + race_black + race_white + ethnicity_hisp + household_income +
                                (1 | site_id_l_br/rel_family_id/src_subject_id), family = binomial, nAGQ = 0)
 
 mod_headache_med2 <- glmer(data = data_long, 
-                           medhx_2q_l~Daily.Preventive.medications_2w + scale(age_years) + scale(age_years)^2 + scale(age_years)^3  + sex_br + race_black + race_white + ethnicity_hisp + household_income +
+                           medhx_2q_l~Daily.Preventive.medications_2w + scale(age_years) + scale(age_years)^2 + scale(age_years)^3  + 
+                               sex_br + race_black + race_white + ethnicity_hisp + household_income +
                                (1 | site_id_l_br/rel_family_id/src_subject_id), family = binomial, nAGQ = 0)
 
 mod_headache_med3 <- glmer(data = data_long, 
-                           medhx_2q_l~Rescue.Medications_2w + scale(age_years) + scale(age_years)^2 + scale(age_years)^3  + sex_br + race_black + race_white + ethnicity_hisp + household_income +
+                           medhx_2q_l~Rescue.Medications_2w + scale(age_years) + scale(age_years)^2 + scale(age_years)^3  + 
+                               sex_br + race_black + race_white + ethnicity_hisp + household_income +
                                (1 | site_id_l_br/rel_family_id/src_subject_id), family = binomial, nAGQ = 0)
 
 mod_headache_prs <- glmer(data = data_long, 
-                           medhx_2q_l~migraine_PRS_EUR + scale(age_years) + scale(age_years)^2 + scale(age_years)^3  + sex_br + race_black + race_white + ethnicity_hisp + household_income +
+                           medhx_2q_l~migraine_PRS_EUR + scale(age_years) + scale(age_years)^2 + scale(age_years)^3  + 
+                              sex_br + race_black + race_white + ethnicity_hisp + household_income +
                                (1 | site_id_l_br/rel_family_id/src_subject_id), family = binomial, nAGQ = 0)
 
 tab_model(mod_headache_med1, mod_headache_med2, mod_headache_med3, mod_headache_prs, show.intercept = F)
 ```
-
-
-
-
-
-
-
-
-
-
-
-

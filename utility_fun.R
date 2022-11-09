@@ -90,7 +90,7 @@ get_est <- function(outcome = "medhx_2q_l", predictor, variables = var_headache_
     low_ci <- c()
     high_ci <- c()
 
-    mixed_eff <- tryCatch(tidy(model, effects = "fixed", conf.int = T, conf.level = 0.95) %>% select(-effect), error = function(e) "NA")
+    mixed_eff <- tryCatch(tidy(model, effects = "fixed", conf.int = T, conf.level = 0.90) %>% select(-effect), error = function(e) "NA")
     p_value <- tryCatch(mixed_eff[2,5], error = function(e) 9999999)
     coef <- tryCatch(mixed_eff[2,2], error = function(e) 9999999)
     std.error <- tryCatch(mixed_eff[2,3], error = function(e) 9999999)

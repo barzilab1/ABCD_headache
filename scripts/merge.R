@@ -77,6 +77,41 @@ dataset <- dataset %>%
 dataset <- dataset %>%
     filter(eventname != "3_year_follow_up_y_arm_1")
 
+dataset <- dataset %>%
+    mutate(across(contains("fu_"), ~case_when(.x == 2 ~ 1, .x == 1 ~ 0, TRUE ~ NA_real_), .names = "{col}_bad")) %>%
+    mutate(migraine_PRS_EUR = case_when(genetic_afr == 0 ~ migraine_PRS, TRUE ~ NA_real_)) %>%
+    filter(!is.na(medhx_2q_l))
+
+
+# Dichotomize those significant variables to calculate exposome scores
+# Create binary variables
+## 1_Household income if<$25k; then code as 1 --- if>$25k; then code as 0
+## 2_Number of nocked unconscious: if >0: then code as 1 --- if =0: then code as 0
+## 3_Number of head injuries: if >0: then code as 1 --- if =0: then code as 0
+## 4_ worst injury overall: if >1: then code as 1 --- if =1: then code as 0
+## 5_ my neighborhood is safe from crime: if <=2: then code as 1 --- if >2: then code as 0
+## 6_ discrimination measure: if >1: then code as 1 --- if =1: then code as 0
+## 7_total life events: if >=90th percentile; then =1 --- if <90th percentile; then =0
+## 8_area deprivation: if <=10th percentile; then =1 --- if >10th percentile; then =0
+
+dataset <- dataset %>%
+    mutate(fam_under_poverty_line = case_when(household_income <= 4 ~ 1, household_income >= 6 ~ 0, TRUE ~ NA_real_), # group 5: 1/2 above, 1/2 below poverty line --> NA
+           knocked_unconscious = case_when(medhx_ss_6j_times_p_l > 0 ~ 1, TRUE ~ as.numeric(medhx_ss_6j_times_p_l)),
+           head_injuries = case_when(medhx_ss_6i_times_p_l > 0 ~ 1, TRUE ~ as.numeric(medhx_ss_6i_times_p_l)),
+           tbi_worst_overall = case_when(tbi_ss_worst_overall_l == 1 ~ 0, tbi_ss_worst_overall_l > 1 ~ 1, TRUE ~ as.numeric(tbi_ss_worst_overall_l)),
+           neighborh_notsafe = case_when(neighborhood3r_p <= 2 ~ 1, neighborhood3r_p > 2 ~ 0, TRUE ~ as.numeric(neighborhood3r_p)),
+           discrimination = case_when(dim_y_ss_mean == 1 ~ 0, dim_y_ss_mean > 1 ~ 1, TRUE ~ as.numeric(dim_y_ss_mean)),
+           # ple_total_bad_90perc =
+           #     case_when(ple_y_ss_total_bad >= (quantile(dataset$ple_y_ss_total_bad, probs = 0.9, na.rm = T)) ~ 1,
+           #               ple_y_ss_total_bad < (quantile(dataset$ple_y_ss_total_bad, probs = 0.9, na.rm = T)) ~ 0,
+           #               TRUE ~ NA_real_), # risk # TOP 10% ~ 1
+           ADI_10perc =
+               case_when(reshist_addr1_adi_perc <= (quantile(dataset$reshist_addr1_adi_perc, probs = 0.1, na.rm = T)) ~ 1,
+                         reshist_addr1_adi_perc > (quantile(dataset$reshist_addr1_adi_perc, probs = 0.1, na.rm = T)) ~ 0,
+                         TRUE ~ NA_real_) # protective # BOTTOM 10% ~ 1
+    )
+
+
 write.csv(file = "outputs/dataset_long.csv", x = dataset, row.names = F, na = "")
 
 

@@ -1,0 +1,98 @@
+---
+title: "Untitled"
+author: "Kate Tran"
+date: "10/11/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(dplyr)
+library(grid)
+library(janitor)
+library(ggforestplot)
+library(ggplot2)
+```
+
+```{r}
+univariate_headache_plot <- readRDS("../outputs/univariate_plot_abcdgr1_coef_11142.rds") 
+
+univariate_headache_plot <- univariate_headache_plot %>% 
+    select(Exposure = variable, everything()) %>% 
+    mutate(Exposure = dplyr::recode(Exposure,
+                                    household_income = "Household income",
+                                    medhx_ss_6i_times_p_l = "Number of times of head injury",
+                                    medhx_ss_6j_times_p_l = "Number of times of knocked unconscious",
+                                    tbi_ss_worst_overall_l = "TBI severity scale (improbable to severe)",
+                                    medhx_6i_l = "Head injury requiring doctor's visit",
+                                    tbi_1 = "Head injury or concussion requiring hospitalization",
+                                    tbi_3 = "Head injury from fall/being hit something",
+                                    tbi_7a = "Multiple head injuries",
+                                    dim_yesno_q1 = "Experience of race/ethnicity/color discrimination in past year",
+                                    neighborhood3r_p = "Neighborhood safety from crime",
+                                    famhx_ss_momdad_alc_p = "Parental alcohol problem",
+                                    famhx_ss_momdad_dg_p = "Parental drug problem",
+                                    famhx_ss_momdad_dprs_p = "Parental depression",
+                                    ple_ill_y = "History of serious illness",
+                                    ple_arrest_y = "Family member arrested",
+                                    ple_separ_y = "Parental separation or divorce",
+                                    ple_law_y = "Parental trouble with law",
+                                    ple_jail_y = "Parental or family member incarceration",
+                                    ple_step_y = "New stepmother or stepfather",
+                                    dim_y_ss_mean = "Mean measure of discrimination",
+                                    reshist_addr1_adi_perc = "Area Deprivation Index based on geocoded address"
+           ))
+```
+
+
+```{r}
+univariate_headache_plot <- univariate_headache_plot %>% 
+    dplyr::rename(name = Exposure, beta = coef, se = std.error, pvalue = p_value)
+univariate_headache_plot <- univariate_headache_plot %>% 
+    select(1:4) %>% 
+    mutate(positive = case_when(beta < 0 ~ "negative", beta >= 0 ~ "positive", TRUE ~ NA_character_)) %>% 
+    mutate(across(where(is.numeric), ~round(., 2)))
+
+univariate_headache_plot <- univariate_headache_plot %>% arrange(desc(beta))
+
+
+# Forestplot
+png(file='../plots/forestplot_sig_vars_111422.png', units="in", width=12, height=8, res=620)
+
+forestplot(
+  df = univariate_headache_plot,
+  estimate = beta,
+  logodds = T,
+  colour = positive,
+) +
+    scale_color_manual(values=c("red", "darkblue")) +
+     theme(legend.position="none",
+           plot.title = element_text(hjust = 0.5),
+           axis.text.x = element_text(size = 16),
+           axis.text.y = element_text(size = 15),
+           axis.title.x = element_text(size = 17)
+           ) +
+        xlim(-1,6) +
+    scale_x_continuous(limits = c(0, 7), breaks = seq(0, 7.5, 1)) +
+    xlab("Odds Ratios")
+dev.off() 
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

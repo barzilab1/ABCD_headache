@@ -17,10 +17,10 @@ exposome_sum_set <- read_csv("outputs/exposome_sum_set.csv")
 psychopathology_sum_scores <- read_csv("outputs/psychopathology_sum_scores.csv")
 site <- read_csv("outputs/site.csv")
 geo_data <- read_csv("outputs/geo_data.csv")
-e_factor <- read_csv(paste0(e_factor_files_path, "ABCD_Exposome_bifactor_scores_16March2021.csv"))
+e_factor <- read_csv(file.path(e_factor_files_path, "ABCD_Exposome_bifactor_scores_16March2021.csv"))
 e_factor$src_subject_id = paste0("NDAR_", e_factor$ID)
 e_factor$ID <- NULL
-genetics <- read_csv(paste0(genetic_files_path, "genetic.csv")) %>% dplyr::select(src_subject_id, migraine_PRS, genetic_afr)
+genetics <- read_csv(file.path(genetic_files_path, "genetic.csv")) %>% dplyr::select(src_subject_id, migraine_PRS, genetic_afr)
 # ksad_y_diagnosis <- read_csv("outputs/ksad_y_diagnosis.csv")
 
 # suicide_set <- read_csv("outputs/suicide_set.csv")
@@ -95,92 +95,25 @@ dataset <- dataset %>%
 ## 8_area deprivation: if <=10th percentile; then =1 --- if >10th percentile; then =0
 
 dataset <- dataset %>%
-    mutate(fam_under_poverty_line = case_when(household_income <= 4 ~ 1, household_income >= 6 ~ 0, TRUE ~ NA_real_), # group 5: 1/2 above, 1/2 below poverty line --> NA
-           knocked_unconscious = case_when(medhx_ss_6j_times_p_l > 0 ~ 1, TRUE ~ as.numeric(medhx_ss_6j_times_p_l)),
-           head_injuries = case_when(medhx_ss_6i_times_p_l > 0 ~ 1, TRUE ~ as.numeric(medhx_ss_6i_times_p_l)),
-           tbi_worst_overall = case_when(tbi_ss_worst_overall_l == 1 ~ 0, tbi_ss_worst_overall_l > 1 ~ 1, TRUE ~ as.numeric(tbi_ss_worst_overall_l)),
-           neighborh_notsafe = case_when(neighborhood3r_p <= 2 ~ 1, neighborhood3r_p > 2 ~ 0, TRUE ~ as.numeric(neighborhood3r_p)),
-           discrimination = case_when(dim_y_ss_mean == 1 ~ 0, dim_y_ss_mean > 1 ~ 1, TRUE ~ as.numeric(dim_y_ss_mean)),
-           # ple_total_bad_90perc =
-           #     case_when(ple_y_ss_total_bad >= (quantile(dataset$ple_y_ss_total_bad, probs = 0.9, na.rm = T)) ~ 1,
-           #               ple_y_ss_total_bad < (quantile(dataset$ple_y_ss_total_bad, probs = 0.9, na.rm = T)) ~ 0,
-           #               TRUE ~ NA_real_), # risk # TOP 10% ~ 1
-           ADI_10perc =
-               case_when(reshist_addr1_adi_perc <= (quantile(dataset$reshist_addr1_adi_perc, probs = 0.1, na.rm = T)) ~ 1,
-                         reshist_addr1_adi_perc > (quantile(dataset$reshist_addr1_adi_perc, probs = 0.1, na.rm = T)) ~ 0,
-                         TRUE ~ NA_real_) # protective # BOTTOM 10% ~ 1
+    mutate(
+        fam_under_poverty_line = case_when(household_income <= 4 ~ 1, household_income >= 6 ~ 0, TRUE ~ NA_real_), # group 5: 1/2 above, 1/2 below poverty line --> NA
+        knocked_unconscious = case_when(medhx_ss_6j_times_p_l > 0 ~ 1, TRUE ~ as.numeric(medhx_ss_6j_times_p_l)),
+        head_injuries = case_when(medhx_ss_6i_times_p_l > 0 ~ 1, TRUE ~ as.numeric(medhx_ss_6i_times_p_l)),
+        tbi_worst_overall = case_when(tbi_ss_worst_overall_l == 1 ~ 0, tbi_ss_worst_overall_l > 1 ~ 1, TRUE ~ as.numeric(tbi_ss_worst_overall_l)),
+        neighborh_notsafe = case_when(neighborhood3r_p <= 2 ~ 1, neighborhood3r_p > 2 ~ 0, TRUE ~ as.numeric(neighborhood3r_p)),
+        discrimination = case_when(dim_y_ss_mean == 1 ~ 0, dim_y_ss_mean > 1 ~ 1, TRUE ~ as.numeric(dim_y_ss_mean)),
+        # ple_total_bad_90perc =
+        #     case_when(ple_y_ss_total_bad >= (quantile(dataset$ple_y_ss_total_bad, probs = 0.9, na.rm = T)) ~ 1,
+        #               ple_y_ss_total_bad < (quantile(dataset$ple_y_ss_total_bad, probs = 0.9, na.rm = T)) ~ 0,
+        #               TRUE ~ NA_real_), # risk # TOP 10% ~ 1
+        ADI_10perc =
+            case_when(reshist_addr1_adi_perc <= (quantile(dataset$reshist_addr1_adi_perc, probs = 0.1, na.rm = T)) ~ 1,
+                      reshist_addr1_adi_perc > (quantile(dataset$reshist_addr1_adi_perc, probs = 0.1, na.rm = T)) ~ 0,
+                      TRUE ~ NA_real_) # protective # BOTTOM 10% ~ 1
     )
 
 
 write.csv(file = "outputs/dataset_long.csv", x = dataset, row.names = F, na = "")
-
-
-
-########## DESCRIPTIVE ##########
-
-#################### table 1
-library(tableone)
-binary_vars = c("sex_br","separated_or_divorced", "parents_married", grep("race|hisp|(2w|1yr)$|medhx_[^s]|head", colnames(dataset), value = T))
-all_vars = c("age", "demo_fam_poverty" ,binary_vars, grep("medhx_ss|total$", colnames(dataset), value = T))
-
-
-tab <- CreateTableOne(vars = all_vars, data = dataset, factorVars = binary_vars , strata = "eventname", addOverall = T)
-table1 <- print(tab, quote = FALSE, noSpaces = TRUE, printToggle = FALSE, missing = T)
-write.csv(table1, file = "results/Table1.csv")
-
-
-
-
-#################### check overlaps
-setDT(dataset)
-dataset[eventname == "baseline_year_1_arm_1", table(Migraine.Medications_2w, medhx_2q)]
-dataset[eventname == "baseline_year_1_arm_1", table(Daily.Preventive.medications_2w, medhx_2q)]
-dataset[eventname == "baseline_year_1_arm_1", table(Rescue.Medications_2w, medhx_2q)]
-dataset[eventname == "baseline_year_1_arm_1", table(any_migraine_med_2w , medhx_2q)]
-
-
-dataset[eventname == "1_year_follow_up_y_arm_1", table(Migraine.Medications_2w, medhx_2q_l)]
-dataset[eventname == "1_year_follow_up_y_arm_1", table(Daily.Preventive.medications_2w, medhx_2q_l)]
-dataset[eventname == "1_year_follow_up_y_arm_1", table(Rescue.Medications_2w, medhx_2q_l)]
-dataset[eventname == "1_year_follow_up_y_arm_1", table(any_migraine_med_2w , medhx_2q_l)]
-
-dataset[eventname == "2_year_follow_up_y_arm_1", table(Migraine.Medications_2w, medhx_2q_l)]
-dataset[eventname == "2_year_follow_up_y_arm_1", table(Daily.Preventive.medications_2w, medhx_2q_l)]
-dataset[eventname == "2_year_follow_up_y_arm_1", table(Rescue.Medications_2w, medhx_2q_l)]
-dataset[eventname == "2_year_follow_up_y_arm_1", table(any_migraine_med_2w , medhx_2q_l)]
-
-dataset[eventname == "2_year_follow_up_y_arm_1", table(Migraine.Medications_2w, head_cranium_pain)]
-dataset[eventname == "2_year_follow_up_y_arm_1", table(Daily.Preventive.medications_2w, head_cranium_pain)]
-dataset[eventname == "2_year_follow_up_y_arm_1", table(Rescue.Medications_2w, head_cranium_pain)]
-dataset[eventname == "2_year_follow_up_y_arm_1", table(any_migraine_med_2w , head_cranium_pain)]
-
-
-
-#################### ever (baseline -> 2 year)
-
-dataset_ever = dataset[eventname != "3_year_follow_up_y_arm_1", ]
-dataset_ever[, time := sub("_year.*", "", eventname)]
-dataset_ever[, eventname := NULL]
-
-meds_1_year = grep("_1yr", colnames(dataset_ever), value = T)
-dataset_ever[, (meds_1_year) := NULL ]
-dataset_ever_wide = dcast(dataset_ever,
-                          src_subject_id + race_white + race_black ~ time,
-                          value.var = c(grep("medhx|2w", colnames(dataset), value = T), "separated_or_divorced", "parents_married", "age", "demo_fam_poverty"))
-
-
-dataset_ever_wide[, Migraine.Medications_2w_ever := (Migraine.Medications_2w_baseline | Migraine.Medications_2w_1 | Migraine.Medications_2w_2)*1]
-dataset_ever_wide[, Daily.Preventive.medications_2w_ever := (Daily.Preventive.medications_2w_baseline | Daily.Preventive.medications_2w_1 | Daily.Preventive.medications_2w_2)*1]
-dataset_ever_wide[, Rescue.Medications_2w_ever := (Rescue.Medications_2w_baseline | Rescue.Medications_2w_1 | Rescue.Medications_2w_2)*1]
-dataset_ever_wide[, any_migraine_med_2w_ever := (any_migraine_med_2w_baseline | any_migraine_med_2w_1 | any_migraine_med_2w_2)*1]
-dataset_ever_wide[, medhx_2q_ever := (medhx_2q_baseline | medhx_2q_l_1 | medhx_2q_l_2)*1 ]
-
-
-
-vars = grep("ever", colnames(dataset_ever_wide), value = T)
-tab2 = CreateTableOne(vars = vars, data = dataset_ever_wide, factorVars = vars )
-table2 = print(tab2, quote = FALSE, noSpaces = TRUE, printToggle = FALSE, missing = T)
-write.csv(table2, file = "results/Table2.csv")
 
 
 

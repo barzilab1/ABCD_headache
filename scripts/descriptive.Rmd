@@ -12,14 +12,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r}
 library(dplyr)
 library(tableone)
-library(purrr)
 library(sjPlot)
-library(parameters)
-library(stringr)
-library(MatchIt)
-library(sjPlot)
-library(performance)
-library(janitor)
 
 source("../utility_fun.R")
 ```
@@ -53,12 +46,13 @@ write.csv(
         catDigits = 2,
         contDigits = 2
     ),
-    "../outputs/table1_main_values_110722.csv"
+    "../outputs/table1_main_values_111422.csv"
 )
 
 
 # FDR-adjusted p-values
-table1_adj_p <- round(p.adjust(c(0.00293, 0.66945, 0.00001, 0.00001, 0.00002, 0.81631, 0.64358, 0.09838, 0.00009, 0.00789, 0.00001), method = "fdr"), 3)
+table1_adj_p <- 
+    round(p.adjust(c(0.00293, 0.66945, 0.00001, 0.00001, 0.00002, 0.81631, 0.64358, 0.09838, 0.00009, 0.00789, 0.00001), method = "fdr"), 3)
 
 
 # create migraine PRS among Euro ancestry (white)
@@ -67,7 +61,7 @@ table1_adj_p <- round(p.adjust(c(0.00293, 0.66945, 0.00001, 0.00001, 0.00002, 0.
 
 ```{r}
 # table 2: internal validation # by headache
-table2_var <- c("daily_med_2w_ever", "rescue_med_2w_ever") #, "migraine_PRS_EUR"
+table2_var <- c("daily_med_2w_ever", "migraine_rescue_med_2w_ever") #, "migraine_PRS_EUR"
 
 write.csv(
     print(
@@ -84,7 +78,7 @@ write.csv(
         catDigits = 2,
         contDigits = 2
     ),
-    "../outputs/table2_main_values_110722.csv"
+    "../outputs/table2_main_values_111422.csv"
 )
 
 table2_adj_p <- round(p.adjust(c(0.00001, 0.00001), method = "fdr"), 3)
@@ -100,7 +94,7 @@ data_wide <- data_wide %>%
     mutate(headache_missing = case_when(is.na(headache_ever) ~ "Missing", TRUE ~ "Not missing"))
 
 tableS3_var <- data_wide %>% 
-    select(matches("age_years__2y|sex_br|race|ethnicity|poverty_line$|edu$|daily_med_2w_ever|rescue_med_2w_ever|PRS")) %>% 
+    select(matches("age_years__2y|sex_br|race|ethnicity|poverty_line$|edu$|daily_med_2w_ever|migraine_rescue_med_2w_ever|PRS")) %>% 
     names()
 
 
@@ -121,7 +115,7 @@ write.csv(
                 "race_mixed",
                 "ethnicity_hisp",
                 "daily_med_2w_ever",
-                "rescue_med_2w_ever"
+                "migraine_rescue_med_2w_ever"
             ),
             includeNA = T,
             addOverall = T
@@ -135,7 +129,8 @@ write.csv(
 )
 
 # FDR-adjusted p-values
-tableS3_adj_p <- round(p.adjust(c(0.74085, 0.00001, 0.00001, 0.36898, 0.60990, 0.72167, 0.00001, 0.82726, 0.00001, 0.92661, 0.03992, 0.00001, 0.00004, 0.00001), method = "fdr"), 3)
+tableS3_adj_p <- 
+    round(p.adjust(c(0.74085, 0.00001, 0.00001, 0.36898, 0.60990, 0.72167, 0.00001, 0.82726, 0.00001, 0.92661, 0.03992, 0.00001, 0.00004, 0.00001), method = "fdr"), 3)
 ```
 
 ```{r}
@@ -151,14 +146,14 @@ mod_headache_med2 <- glmer(data = data_long,
                                (1 | site_id_l_br/rel_family_id/src_subject_id), family = binomial, nAGQ = 0)
 
 mod_headache_med3 <- glmer(data = data_long, 
-                           medhx_2q_l~Rescue.Medications_2w + scale(age_years) + scale(age_years)^2 + scale(age_years)^3  + 
+                           medhx_2q_l~Migraine.Rescue.medications_2w + scale(age_years) + scale(age_years)^2 + scale(age_years)^3  + 
                                sex_br + race_black + race_white + ethnicity_hisp + household_income +
                                (1 | site_id_l_br/rel_family_id/src_subject_id), family = binomial, nAGQ = 0)
 
 mod_headache_prs <- glmer(data = data_long, 
-                           medhx_2q_l~migraine_PRS_EUR + scale(age_years) + scale(age_years)^2 + scale(age_years)^3  + 
+                          medhx_2q_l~migraine_PRS_EUR + scale(age_years) + scale(age_years)^2 + scale(age_years)^3  + 
                               sex_br + race_black + race_white + ethnicity_hisp + household_income +
-                               (1 | site_id_l_br/rel_family_id/src_subject_id), family = binomial, nAGQ = 0)
+                              (1 | site_id_l_br/rel_family_id/src_subject_id), family = binomial, nAGQ = 0)
 
 tab_model(mod_headache_med1, mod_headache_med2, mod_headache_med3, mod_headache_prs, show.intercept = F)
 ```

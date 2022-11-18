@@ -12,7 +12,7 @@ ksad_y[ksad_y == "888" | ksad_y == "555"] = NA
 # ksad externalizing symptoms
 # externalize_ksad_y = ksad_y[,which(grepl("^(src|inter|event|sex|ksads_([1-3]|8|10|22)_(8|9)[0-9][0-9])", colnames(ksad_y)))]
 
-#################### internal diagnosis #################### 
+#################### internal diagnosis ####################
 #all kids diagnosis
 ksad_y_diagnosis = ksad_y[,grepl("src|inter|event|sex|_((8[3-4][0-9])|863|864|869|870|(91[1-4])|969|970)_t",colnames(ksad_y))]
 
@@ -27,20 +27,20 @@ ksad_y_diagnosis$diagnosis_DMDD_y = ksad_y_diagnosis$ksads_3_848_t
 ksad_y_diagnosis$diagnosis_anxiety_y = apply(ksad_y_diagnosis[,grepl("ksads_(8|10)_.*_t", colnames(ksad_y_diagnosis))],1 ,function(x) {any(x == 1)*1})
 ksad_y_diagnosis$diagnosis_sleep_y = apply(ksad_y_diagnosis[,grepl("ksads_22_.*_t", colnames(ksad_y_diagnosis))],1 ,function(x) {any(x == 1)*1})
 
-summary(ksad_y_diagnosis[ksad_y_diagnosis$eventname == "baseline_year_1_arm_1",]) 
-summary(ksad_y_diagnosis[ksad_y_diagnosis$eventname == "1_year_follow_up_y_arm_1",]) 
+summary(ksad_y_diagnosis[ksad_y_diagnosis$eventname == "baseline_year_1_arm_1",])
+summary(ksad_y_diagnosis[ksad_y_diagnosis$eventname == "1_year_follow_up_y_arm_1",])
 
 write.csv(file = "outputs/ksad_y_diagnosis.csv",x = ksad_y_diagnosis, row.names=F, na = "")
 
 
-#################### internal symptoms #################### 
+#################### internal symptoms ####################
 
 ksad_y_symptoms = ksad_y[,grepl("src|inter|event|sex|ksads_(1|8|10)_([1-9]|[2-4][0-9]|1[5-8][0-9]|3[0-3][0-9])_|ksads_22_14[1-2]_",colnames(ksad_y))]
 ksad_y_symptoms = ksad_y_symptoms[,!(colnames(ksad_y_symptoms) %in% c("ksads_1_185_t","ksads_1_186_t","ksads_1_187_t","ksads_1_188_t","ksads_8_30_t" ,"ksads_10_330_t"))]
 
-summary(ksad_y_symptoms[ksad_y_symptoms$eventname == "baseline_year_1_arm_1",]) 
-summary(ksad_y_symptoms[ksad_y_symptoms$eventname == "1_year_follow_up_y_arm_1",]) 
+summary(ksad_y_symptoms[ksad_y_symptoms$eventname == "baseline_year_1_arm_1",])
+summary(ksad_y_symptoms[ksad_y_symptoms$eventname == "1_year_follow_up_y_arm_1",])
 
 
-write.csv(file = "outputs/ksad_y_symptoms.csv",x = ksad_y_symptoms, row.names=F, na = "")
+# write.csv(file = "outputs/ksad_y_symptoms.csv",x = ksad_y_symptoms, row.names=F, na = "")
 

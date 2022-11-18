@@ -121,16 +121,17 @@ mod22 <- glmer(medhx_2q_l ~ (1 | site_id_l_br/rel_family_id/src_subject_id) + ag
 # mod23 <- glmer(medhx_2q_l ~ weighted_exposome + (1 | site_id_l_br/rel_family_id/src_subject_id) + age_years + age_years^2 + age_years^3 + sex_br + parents_avg_edu, 
 #               nAGQ = 0, family = binomial, data = abcd_gr2_weight) # all population
 
-mod24 <- glmer(medhx_2q_l ~ weighted_exposome + (1 | site_id_l_br/rel_family_id/src_subject_id) + age_years + age_years^2 + age_years^3 + sex_br + parents_avg_edu, 
+mod24 <- glmer(medhx_2q_l ~ scale(weighted_exposome) + (1 | site_id_l_br/rel_family_id/src_subject_id) + 
+                   age_years + age_years^2 + age_years^3 + sex_br + parents_avg_edu, 
               nAGQ = 0, family = binomial, data = abcd_gr2_weight %>% filter(genetic_afr == 0)) # EUR ancestry
 
 mod25 <- glmer(medhx_2q_l ~ migraine_PRS_EUR + (1 | site_id_l_br/rel_family_id/src_subject_id) + age_years + age_years^2 + age_years^3 + sex_br + parents_avg_edu, 
               nAGQ = 0, family = binomial, data = abcd_gr2_weight %>% filter(genetic_afr == 0))
 
-mod26 <- glmer(medhx_2q_l ~ weighted_exposome + migraine_PRS_EUR + (1 | site_id_l_br/rel_family_id/src_subject_id) + age_years + age_years^2 + age_years^3 + sex_br + parents_avg_edu, 
+mod26 <- glmer(medhx_2q_l ~ scale(weighted_exposome) + migraine_PRS_EUR + (1 | site_id_l_br/rel_family_id/src_subject_id) + age_years + age_years^2 + age_years^3 + sex_br + parents_avg_edu, 
               nAGQ = 0, family = binomial, data = abcd_gr2_weight %>% filter(genetic_afr == 0))
 
-mod27 <- glmer(medhx_2q_l ~ weighted_exposome * migraine_PRS_EUR + (1 | site_id_l_br/rel_family_id/src_subject_id) + age_years + age_years^2 + age_years^3 + sex_br + parents_avg_edu, nAGQ = 0, family = binomial, data = abcd_gr2_weight %>% filter(genetic_afr == 0))
+mod27 <- glmer(medhx_2q_l ~ scale(weighted_exposome) * migraine_PRS_EUR + (1 | site_id_l_br/rel_family_id/src_subject_id) + age_years + age_years^2 + age_years^3 + sex_br + parents_avg_edu, nAGQ = 0, family = binomial, data = abcd_gr2_weight %>% filter(genetic_afr == 0))
 
 com2 <- tab_model(mod22, mod24, mod25, mod26, mod27)
 # Nagelkerke’s R2

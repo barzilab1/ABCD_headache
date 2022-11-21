@@ -1,5 +1,4 @@
 library(readr)
-library(plyr)
 library(dplyr)
 source("config.R")
 
@@ -8,82 +7,54 @@ demographics_long <- read_csv("outputs/demographics_long.csv")
 medications <- read_csv("outputs/medications.csv", col_types = cols(.default = "d", src_subject_id = "c", eventname = "c",))
 physicalhealth_sum <- read_csv("outputs/physicalhealth_sum.csv")
 physicalhealth <- read_csv("outputs/physicalhealth.csv") %>% dplyr::select(-sex)
-# hormone_saliva <- read_csv("outputs/hormone_saliva.csv")
 family_id <- read_csv("outputs/family_id.csv") %>% select(src_subject_id, rel_family_id)
 exposome_set <- read_csv("outputs/exposome_set.csv")
 exposome_sum_set <- read_csv("outputs/exposome_sum_set.csv")
-# ABCD_BMI <- read_csv("outputs/ABCD_BMI.csv")
-# psychopathology <- read_csv("outputs/psychopathology.csv")
 psychopathology_sum_scores <- read_csv("outputs/psychopathology_sum_scores.csv")
 site <- read_csv("outputs/site.csv")
 geo_data <- read_csv("outputs/geo_data.csv")
-e_factor <- read_csv(file.path(e_factor_files_path, "ABCD_Exposome_bifactor_scores_16March2021.csv"))
-e_factor$src_subject_id = paste0("NDAR_", e_factor$ID)
-e_factor$ID <- NULL
+e_factor <- read_csv(file.path(e_factor_files_path, "ABCD_Exposome_bifactor_scores_16March2021.csv")) %>%
+    mutate(src_subject_id = paste0("NDAR_", e_factor$ID)) %>%
+    select(-ID)
 genetics <- read_csv(file.path(genetic_files_path, "genetic.csv")) %>% dplyr::select(src_subject_id, migraine_PRS, genetic_afr)
-# ksad_y_diagnosis <- read_csv("outputs/ksad_y_diagnosis.csv")
-
-# suicide_set <- read_csv("outputs/suicide_set.csv")
 
 # combine demographics of all time points
 demo_race = demographics_baseline[,grep("src|race|hisp", colnames(demographics_baseline))]
 
-demographics_long = merge(demographics_long, demo_race)
-demographics_long = demographics_long[demographics_long$eventname != "baseline_year_1_arm_1",]
+demographics_long <- merge(demographics_long, demo_race)
+demographics_long <- demographics_long %>% filter(eventname != "baseline_year_1_arm_1")
 
-demographics = rbind.fill(demographics_baseline, demographics_long)
-
+demographics = bind_rows(demographics_baseline, demographics_long)
 
 # define headaches medications
 medications = medications[,grep("src|inter|event|Migraine|Daily.Preventive|Rescue.Medications", colnames(medications))]
 medications$any_migraine_med_2w = Reduce("|",medications[,c("Migraine.Medications_2w", "Daily.Preventive.medications_2w", "Rescue.Medications_2w")])*1
 medications$any_migraine_med_1yr = Reduce("|",medications[,c("Migraine.Medications_1yr", "Daily.Preventive.medications_1yr", "Rescue.Medications_1yr")])*1
 
-
-
+# Merge data
 dataset = merge(demographics, medications, all.x = T)
 dataset = merge(dataset, physicalhealth_sum, all.x = T)
 dataset = merge(dataset, physicalhealth, all.x = T)
-# dataset = merge(dataset, hormone_saliva, all.x = T)
 dataset = merge(dataset, family_id, all.x = T)
 dataset = merge(dataset, exposome_set, all.x = T)
 dataset = merge(dataset, exposome_sum_set, all.x = T)
-# dataset = merge(dataset, ABCD_BMI, all.x = T)
-# dataset = merge(dataset, psychopathology, all.x = T)
 dataset = merge(dataset, psychopathology_sum_scores, all.x = T)
-# dataset = merge(dataset, ksad_y_diagnosis, all.x = T)
 dataset = merge(dataset, e_factor, all.x = T)
 dataset = merge(dataset, genetics, all.x = T)
 dataset = merge(dataset, site, all.x = T)
 dataset = merge(dataset, geo_data, all.x = T)
-# dataset = merge(dataset, suicide_set)
-dataset = janitor::remove_empty(dataset, "cols")
+
 # Create new variables
 dataset <- dataset %>%
-    mutate(
-        # headache_severity_cat = case_when(
-        #     medhx_2q_l == 0 & any_migraine_med_2w == 0 ~ 0,
-        #     medhx_2q_l == 1 & any_migraine_med_2w == 0 ~ 1,
-        #     medhx_2q_l == 1 & Rescue.Medications_2w == 1 ~ 2,
-        #     medhx_2q_l == 1 & Migraine.Medications_2w == 1 ~ 3,
-        #     medhx_2q_l == 1 & Daily.Preventive.medications_2w == 1 ~ 4,
-        #     TRUE ~ NA_real_
-        # ),
-        age_years = interview_age/12
-    ) %>%
-    janitor::remove_empty("cols")
+    # Age in years
+    mutate(age_years = interview_age/12) %>%
 
-# Only use data at baseline, 1-year and 2-year
-dataset <- dataset %>%
-    filter(eventname != "3_year_follow_up_y_arm_1")
-
-dataset <- dataset %>%
+    # Create bad(yes, no) life events
     mutate(across(contains("fu_"), ~case_when(.x == 2 ~ 1, .x == 1 ~ 0, TRUE ~ NA_real_), .names = "{col}_bad")) %>%
-    mutate(migraine_PRS_EUR = case_when(genetic_afr == 0 ~ migraine_PRS, TRUE ~ NA_real_)) %>%
-    filter(!is.na(medhx_2q_l))
 
+    # Create migraine PRS among only European ancestry (for convenience)
+    mutate(migraine_PRS_EUR = case_when(genetic_afr == 0 ~ migraine_PRS, TRUE ~ NA_real_))
 
-# Dichotomize those significant variables to calculate exposome scores
 # Create binary variables
 ## 1_Household income if<$25k; then code as 1 --- if>$25k; then code as 0
 ## 2_Number of nocked unconscious: if >0: then code as 1 --- if =0: then code as 0
@@ -112,6 +83,13 @@ dataset <- dataset %>%
                       TRUE ~ NA_real_) # protective # BOTTOM 10% ~ 1
     )
 
+# Remove empty rows and columns
+dataset <- dataset %>% janitor::remove_empty(c("rows","cols")) %>%
+    # Remove rows with missing values of headache
+    filter(!is.na(medhx_2q_l),
+
+           # Only use data at baseline, 1-year and 2-year
+           eventname != "3_year_follow_up_y_arm_1")
 
 write.csv(file = "outputs/dataset_long.csv", x = dataset, row.names = F, na = "")
 

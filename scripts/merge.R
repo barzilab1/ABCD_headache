@@ -1,5 +1,6 @@
 library(readr)
 library(dplyr)
+library(janitor)
 source("config.R")
 
 demographics_baseline <- read_csv("outputs/demographics_baseline.csv")
@@ -84,7 +85,7 @@ dataset <- dataset %>%
     )
 
 # Remove empty rows and columns
-dataset <- dataset %>% janitor::remove_empty(c("rows","cols")) %>%
+dataset <- dataset %>% remove_empty(c("rows","cols")) %>%
     # Remove rows with missing values of headache
     filter(!is.na(medhx_2q_l),
 

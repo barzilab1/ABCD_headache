@@ -77,7 +77,8 @@ models <- function(outcome, predictor, variables, var_added) {
 }
 
 
-get_est <- function(outcome = "medhx_2q_l", predictor, variables = var_headache_0, var_added = NULL, data, estimate, output) {
+# get_est <- function(outcome = "medhx_2q_l", predictor, variables = var_headache_0, var_added = NULL, data, estimate, output) {
+get_est <- function(outcome, predictor, variables, var_added = NULL, data, estimate, output) {
 
     estimate <- match.arg(estimate, c("coef", "OR"))
 

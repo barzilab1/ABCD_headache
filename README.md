@@ -36,5 +36,6 @@
 3. Run the [merge.R](scripts/merge.R) and [create_wide_data.Rmd](scripts/create_wide_data.Rmd) script to create the long and wide format dataset.
 4. Run the [create_descriptive_tables.Rmd](scripts/create_descriptive_tables.Rmd) to generate tables of the main paper and supplement.
 5. Run the [main_analyses.Rmd](scripts/main_analyses.Rmd) to generate main results.
-5. Run the [create_forest_plot.Rmd](scripts/create_forest_plot.Rmd) to generate the forest plot (figure 2).
-5. Run the [sensitivity analysis.Rmd](scripts/sensitivity analysis.Rmd) to generate eTable 7 and 8.
+6. Run the [create_forest_plot.Rmd](scripts/create_forest_plot.Rmd) to generate the forest plot (figure 2).
+7. Run the [sensitivity analysis.Rmd](scripts/sensitivity analysis.Rmd) to generate eTable 7 and 8.
+

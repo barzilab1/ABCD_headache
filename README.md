@@ -37,4 +37,4 @@
 4. Run the [create_descriptive_tables.Rmd](scripts/create_descriptive_tables.Rmd) to generate tables of the main paper and supplement.
 5. Run the [main_analyses.Rmd](scripts/main_analyses.Rmd) to generate main results.
 6. Run the [create_forest_plot.Rmd](scripts/create_forest_plot.Rmd) to generate the forest plot (figure 2).
-7. Run the [sensitivity analysis.Rmd](scripts/sensitivity analysis.Rmd) to generate eTable 7 and 8.
+7. Run the [sensitivity_analysis.Rmd](scripts/sensitivity_analysis.Rmd) to generate eTable 7 and 8.

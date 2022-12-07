@@ -1,0 +1,176 @@
+---
+title: "Sensitivity analysis"
+author: "Kate Tran"
+date: "11/4/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(readr)
+library(dplyr)
+library(purrr)
+library(sjPlot)
+library(performance)
+source("../utility_fun.R")
+```
+
+```{r}
+abcd_gr1 <- read_rds("../outputs/abcd_gr1.rds")
+abcd_gr2 <- read_rds("../outputs/abcd_gr2.rds")
+```
+
+# Sensitivity analysis 1: dichotomize all continuous variables
+```{r}
+# Get weight from abcd_gr1 # but use binary variables only
+# Re-run the models with all continuous variables being dichotomized
+sig_vars_bin <- c("fam_under_poverty_line", "knocked_unconscious", "tbi_worst_overall", "medhx_6i_l", "tbi_1",
+                  "tbi_3", "tbi_7a", "dim_yesno_q1", "neighborh_notsafe", "famhx_ss_momdad_alc_p", "famhx_ss_momdad_dg_p",  
+                  "famhx_ss_momdad_dprs_p", "ple_ill_y", "ple_arrest_y", "ple_separ_y", "ple_law_y", "ple_jail_y",            
+                  "ple_step_y", "discrimination", "ADI_10perc")
+
+# Run the logistic regression of significant variables on the second half of the data
+output_sens <- data.frame("variable" = NA, "coef" = NA, "p_value" = NA, "std.error" = NA, "low_ci" = NA, "high_ci" = NA)
+
+var_headache_0 <- "(1 | site_id_l_br/rel_family_id/src_subject_id)"
+
+univariate_sens1 <- sig_vars_bin %>%  
+    map_dfr(~get_est(outcome = "medhx_2q_l", predictor = .x, variables = var_headache_0, data = abcd_gr1, estimate = "coef", output = output_sens, conf_int = 0.9))
+
+weight_sens1 <- univariate_sens1 %>% select(coef) %>% pull()
+
+abcd_gr2_weight_sens1 <- transform(abcd_gr2, weighted_exposome = 
+                                   rowSums(
+                                       sweep(abcd_gr2 %>% select(fam_under_poverty_line, knocked_unconscious, tbi_worst_overall, 
+                                                                 medhx_6i_l, tbi_1, tbi_3, tbi_7a,
+                                                                 dim_yesno_q1, neighborh_notsafe, famhx_ss_momdad_alc_p, 
+                                                                 famhx_ss_momdad_dg_p, famhx_ss_momdad_dprs_p, 
+                                                                 ple_ill_y, ple_arrest_y, ple_separ_y, ple_law_y, ple_jail_y, ple_step_y,             
+                                                                 discrimination, ADI_10perc), 2, weight_sens1, `*`), 
+                                       na.rm = T))
+```
+
+```{r}
+# eTable 7
+mod1.1 <- glmer(medhx_2q_l ~ (1 | site_id_l_br/rel_family_id/src_subject_id) + 
+                   age_years + age_years^2 + age_years^3 + sex_br + household_income, 
+              nAGQ = 0, family = binomial, data = abcd_gr2_weight_sens1 %>% filter(genetic_afr == 0)) # EUR ancestry
+
+mod2.1 <- glmer(medhx_2q_l ~ scale(weighted_exposome) + (1 | site_id_l_br/rel_family_id/src_subject_id) + 
+                   age_years + age_years^2 + age_years^3 + sex_br + household_income, 
+              nAGQ = 0, family = binomial, data = abcd_gr2_weight_sens1 %>% filter(genetic_afr == 0)) # EUR ancestry
+
+mod3.1 <- glmer(medhx_2q_l ~ migraine_PRS_EUR + (1 | site_id_l_br/rel_family_id/src_subject_id) + 
+                   age_years + age_years^2 + age_years^3 + sex_br + household_income, 
+              nAGQ = 0, family = binomial, data = abcd_gr2_weight_sens1 %>% filter(genetic_afr == 0))
+
+mod4.1 <- glmer(medhx_2q_l ~ scale(weighted_exposome) + migraine_PRS_EUR + (1 | site_id_l_br/rel_family_id/src_subject_id) + 
+                   age_years + age_years^2 + age_years^3 + sex_br + household_income, 
+              nAGQ = 0, family = binomial, data = abcd_gr2_weight_sens1 %>% filter(genetic_afr == 0))
+
+mod5.1 <- glmer(medhx_2q_l ~ scale(weighted_exposome) * migraine_PRS_EUR + (1 | site_id_l_br/rel_family_id/src_subject_id) + 
+                   age_years + age_years^2 + age_years^3 + sex_br + household_income, nAGQ = 0, family = binomial, 
+               data = abcd_gr2_weight_sens1 %>% filter(genetic_afr == 0))
+
+com1 <- tab_model(mod1.1, mod2.1, mod3.1, mod4.1, mod5.1)
+
+# Nagelkerke’s R2
+r2(mod1.1)[2]
+r2(mod2.1)[2]
+r2(mod3.1)[2]
+r2(mod4.1)[2]
+r2(mod5.1)[2]
+
+anova(mod1.1, mod2.1, test="Chisq")
+anova(mod1.1, mod3.1, test="Chisq")
+anova(mod2.1, mod4.1, test="Chisq")
+anova(mod3.1, mod4.1, test="Chisq") 
+anova(mod4.1, mod5.1, test="Chisq") 
+
+# adj p
+round(p.adjust(c(4.87e-08, 0.0005374, 0.0009536, 8.44e-08, 0.1282), method = "fdr"), 3)
+```
+
+# Sensitivity analysis 2: P-threshold = 0.5
+```{r}
+# Significant variables are those with P <= 0.5 from univariate_headache_1toall object in the main analysis
+# Rerun all models with 50% CI
+vars <- abcd_gr1 %>% 
+    dplyr::select(matches(c("d_inc|famhx_ss_mom|dim_y|harm(2?)$|bully|hood(_?)[^_P]|nsc_|adi.*_[irmp]|pmq|fes_y.*_fc$|crpbi|srpf|macv_y.*fs|ple.*[^fu]_(y|fu_y_bad)$|hx.*[26][ij]|tbi.*_l$|tbi_[123457]|cat$"))) %>% names()
+
+# Significant (p-value <= 0.5)
+univariate_headache_sens2 <- vars[1:length(vars)] %>%  
+    map_dfr(~get_est(outcome = "medhx_2q_l", predictor = .x, variables = var_headache_0, data = abcd_gr1, estimate = "OR", output = output_sens, conf_int = 0.5))
+
+# Get the list of significant variables at )=0.5
+sig_vars_sens2 <- univariate_headache_sens2 %>% filter(p_value <= 0.5) %>% select(variable) %>% pull()
+
+# Dichotomize 1 Likert variable neighborhood3r_p
+sig_vars_sens2[sig_vars_sens2 == "neighborhood3r_p"] <- "neighborh_notsafe"
+sig_vars_sens2[sig_vars_sens2 == "neighborhood_crime_y"] <- "neighborh_notsafe_y"
+sig_vars_sens2[sig_vars_sens2 == "neighborhood2r_p"] <- "neighborh_violence"
+sig_vars_sens2[sig_vars_sens2 == "neighborhood3r_p"] <- NULL
+sig_vars_sens2[sig_vars_sens2 == "neighborhood_crime_y"] <- NULL
+sig_vars_sens2[sig_vars_sens2 == "neighborhood2r_p"] <- NULL
+
+# Get coefficients (weight) for all variables including new dichotomized variables
+univariate_sens2 <- sig_vars_sens2 %>%  
+    map_dfr(~get_est(outcome = "medhx_2q_l", predictor = .x, variables = var_headache_0, data = abcd_gr1, estimate = "coef", output = output_sens, conf_int = 0.5))
+
+weight_sens2 <- univariate_sens2 %>% arrange(coef) %>% select(coef) %>% pull()
+# Make sure columns in abcd_gr2 same order as in weight_sens2
+abcd_gr2_weight_sens2 <- transform(abcd_gr2, weighted_exposome = 
+                                   rowSums(
+                                       sweep(abcd_gr2 %>% select(all_of(univariate_sens2 %>% arrange(coef) %>% select(variable) %>% pull())), 2, weight_sens2, `*`), 
+                                       na.rm = T))
+```
+
+```{r}
+# eTable 8
+mod1.2 <- glmer(medhx_2q_l ~ (1 | site_id_l_br/rel_family_id/src_subject_id) + 
+                   age_years + age_years^2 + age_years^3 + sex_br + household_income, 
+              nAGQ = 0, family = binomial, data = abcd_gr2_weight_sens2 %>% filter(genetic_afr == 0)) # EUR ancestry
+
+mod2.2 <- glmer(medhx_2q_l ~ scale(weighted_exposome) + (1 | site_id_l_br/rel_family_id/src_subject_id) + 
+                   age_years + age_years^2 + age_years^3 + sex_br + household_income, 
+              nAGQ = 0, family = binomial, data = abcd_gr2_weight_sens2 %>% filter(genetic_afr == 0)) # EUR ancestry
+
+mod3.2 <- glmer(medhx_2q_l ~ migraine_PRS_EUR + (1 | site_id_l_br/rel_family_id/src_subject_id) + 
+                   age_years + age_years^2 + age_years^3 + sex_br + household_income, 
+              nAGQ = 0, family = binomial, data = abcd_gr2_weight_sens2 %>% filter(genetic_afr == 0))
+
+mod4.2 <- glmer(medhx_2q_l ~ scale(weighted_exposome) + migraine_PRS_EUR + (1 | site_id_l_br/rel_family_id/src_subject_id) + 
+                   age_years + age_years^2 + age_years^3 + sex_br + household_income, 
+              nAGQ = 0, family = binomial, data = abcd_gr2_weight_sens2 %>% filter(genetic_afr == 0))
+
+mod5.2 <- glmer(medhx_2q_l ~ scale(weighted_exposome) * migraine_PRS_EUR + (1 | site_id_l_br/rel_family_id/src_subject_id) + 
+                   age_years + age_years^2 + age_years^3 + sex_br + household_income, nAGQ = 0, family = binomial, 
+               data = abcd_gr2_weight_sens2 %>% filter(genetic_afr == 0))
+
+com2 <- tab_model(mod1.2, mod2.2, mod3.2, mod4.2, mod5.2)
+
+# Nagelkerke’s R2
+r2(mod1.2)[2]
+r2(mod2.2)[2]
+r2(mod3.2)[2]
+r2(mod4.2)[2]
+r2(mod5.2)[2]
+
+anova(mod1.2, mod2.2, test="Chisq")
+anova(mod1.2, mod3.2, test="Chisq")
+anova(mod2.2, mod4.2, test="Chisq")
+anova(mod3.2, mod4.2, test="Chisq") 
+anova(mod4.2, mod5.2, test="Chisq") 
+
+# adj p
+round(p.adjust(c(2.008e-07, 0.0005374, 0.0009672, 3.534e-07, 0.31), method = "fdr"), 3) 
+```
+
+
+
+
+
+

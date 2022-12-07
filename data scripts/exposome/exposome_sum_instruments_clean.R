@@ -18,28 +18,9 @@ sscep = load_instrument("abcd_sscep01", abcd_files_path)
 sscep = sscep[, !grepl("_(nm|nt|na|answered)$", colnames(sscep))]
 
 
-########### Sum Scores Mobil Tech Youth ###########
-# ssmty = load_instrument("abcd_ssmty01", abcd_files_path)
-
-# ssmty = ssmty[, grepl("(src|interview|event|sex)|_(weekend|weekday)$", colnames(ssmty))]
-
-
-
-########### Longitudinal Summary Scores Sports Activity ###########
-# lsssa = load_instrument("abcd_lsssa01", abcd_files_path)
-# lsssa[lsssa == 999] = NA
-
-#remove empty columns
-# lsssa = lsssa[,colSums(is.na(lsssa)) != dim(lsssa)[1]]
-
-
-
 
 ########### merge all tables
-# exposome_sum_set = merge(sscey01, ssmty)
 exposome_sum_set = merge(sscey01, sscep)
-# exposome_sum_set = merge(exposome_sum_set, sscep, all.x = T)
-# exposome_sum_set = merge(exposome_sum_set, lsssa, all.x = T)
 
 write.csv(file = "outputs/exposome_sum_set.csv",x = exposome_sum_set, row.names = F, na = "")
 

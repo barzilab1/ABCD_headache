@@ -46,25 +46,6 @@ acspsw03 = load_instrument("acspsw03",abcd_files_path)
 acspsw03 = acspsw03[acspsw03$eventname == "baseline_year_1_arm_1",grepl("src|inter|^sex|event|fam", colnames(acspsw03))]
 
 
-########### Longitudinal Parent Sports and Activities Involvement Questionnaire ###########
-# lpsaiq01 = load_instrument("abcd_lpsaiq01",abcd_files_path)
-#
-# lpsaiq01[lpsaiq01 == 999] = NA
-# lpsaiq01 = lpsaiq01[, !(colnames(lpsaiq01) %in% c("sai_l_p_select_language___1"))]
-#
-# # Total activities
-# lpsaiq01$sai_total_activities = rowSums(lpsaiq01[, grepl("sai_p_activities_l___[0-28]", colnames(lpsaiq01))])
-#
-# # select variables
-# lpsaiq01 <- lpsaiq01[, grepl("src|interview|sex|event|perwk|(vities)$", colnames(lpsaiq01))] %>% names()
-#
-#
-# ########### ABCD Parent Sports and Activities Involvement Questionnaire (SAIQ) ###########
-# saiq02 = load_instrument("abcd_saiq02",abcd_files_path)
-# saiq02$sai_total_activities = rowSums(saiq02[,grepl("sai_p_activities___[0-28]",colnames(saiq02))])
-#
-# saiq02 <- saiq02[, grepl("src|interview|sex|event|(vities)$", colnames(saiq02))] %>% names()
-
 ########### Cyber Bully ###########
 cb = load_instrument("abcd_cb01",abcd_files_path)
 cb[cb == 777 | cb == 999] = NA
@@ -75,8 +56,6 @@ exposome_set = merge(ydmes01, nsc01, all.y = T)
 exposome_set = merge(exposome_set, pnsc01, all.x = T)
 exposome_set = merge(exposome_set, fhxssp01, all.x = T)
 exposome_set = merge(exposome_set, yle01, all.x = T)
-# exposome_set = merge(exposome_set, lpsaiq01, all.x = T)
-# exposome_set = merge(exposome_set, saiq02, all.x = T)
 exposome_set = merge(exposome_set, cb, all.x = T)
 
 write.csv(file = "outputs/family_id.csv",x = acspsw03, row.names=F, na = "")

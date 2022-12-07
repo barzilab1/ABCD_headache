@@ -9,8 +9,8 @@ abcd_data_path = "ABCD data"
 prs_box_path = "Ran_Barzilay/"
 abcd_version = "4.0/"
 abcd_covid = "covid19"
-p_factor_box_path = "Projects/exposome_Tyler/3.0/data/p factor scores"
-e_factor_box_path = "Projects/exposome_Tyler/3.0/data/e factor scores"
+p_factor_box_path = "Projects/exposome_Tyler/3.0/results/p factor scores"
+e_factor_box_path = "Projects/exposome_Tyler/3.0/results/e factor scores"
 
 abcd_files_path = file.path(main_abcd_path, abcd_box_path, abcd_data_path, abcd_version)
 abcd_covid_r1_files_path = file.path(main_abcd_path, abcd_box_path, abcd_data_path, abcd_covid, "1_Data_Release/")

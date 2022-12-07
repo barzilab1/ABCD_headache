@@ -78,7 +78,7 @@ models <- function(outcome, predictor, variables, var_added) {
 
 
 # get_est <- function(outcome = "medhx_2q_l", predictor, variables = var_headache_0, var_added = NULL, data, estimate, output) {
-get_est <- function(outcome, predictor, variables, var_added = NULL, data, estimate, output) {
+get_est <- function(outcome, predictor, variables, var_added = NULL, data, estimate, output, conf_int) {
 
     estimate <- match.arg(estimate, c("coef", "OR"))
 
@@ -91,7 +91,7 @@ get_est <- function(outcome, predictor, variables, var_added = NULL, data, estim
     low_ci <- c()
     high_ci <- c()
 
-    mixed_eff <- tryCatch(tidy(model, effects = "fixed", conf.int = T, conf.level = 0.90) %>% select(-effect), error = function(e) "NA")
+    mixed_eff <- tryCatch(tidy(model, effects = "fixed", conf.int = T, conf.level = conf_int) %>% select(-effect), error = function(e) "NA")
     p_value <- tryCatch(mixed_eff[2,5], error = function(e) 9999999)
     coef <- tryCatch(mixed_eff[2,2], error = function(e) 9999999)
     std.error <- tryCatch(mixed_eff[2,3], error = function(e) 9999999)
@@ -115,13 +115,4 @@ get_est <- function(outcome, predictor, variables, var_added = NULL, data, estim
     }
 
     return(output)
-}
-
-cor_plot <- function(vars) {
-    cor = cor_auto(vars)
-    testRes = cor.mtest(vars, conf.level = 0.95)
-    plot <- corrplot(cor, p.mat = testRes$p, method = 'color', diag = FALSE, type = 'upper', #col = col,
-                     sig.level = c(0.001, 0.01, 0.05), pch.cex = 0.4,
-                     insig = 'label_sig', pch.col = 'grey20', order = 'original', tl.col = "black", tl.srt = 45, tl.cex = 0.35, cl.cex = 0.4, cl.ratio = 0.4)
-    return(plot)
 }

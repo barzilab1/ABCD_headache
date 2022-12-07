@@ -15,7 +15,7 @@ psychopathology_sum_scores <- read_csv("outputs/psychopathology_sum_scores.csv")
 site <- read_csv("outputs/site.csv")
 geo_data <- read_csv("outputs/geo_data.csv")
 e_factor <- read_csv(file.path(e_factor_files_path, "ABCD_Exposome_bifactor_scores_16March2021.csv")) %>%
-    mutate(src_subject_id = paste0("NDAR_", e_factor$ID)) %>%
+    mutate(src_subject_id = paste0("NDAR_", ID)) %>%
     select(-ID)
 genetics <- read_csv(file.path(genetic_files_path, "genetic.csv")) %>% dplyr::select(src_subject_id, migraine_PRS, genetic_afr)
 
@@ -63,9 +63,10 @@ dataset <- dataset %>%
 ## 4_ worst injury overall: if >1: then code as 1 --- if =1: then code as 0
 ## 5_ my neighborhood is safe from crime: if <=2: then code as 1 --- if >2: then code as 0
 ## 6_ discrimination measure: if >1: then code as 1 --- if =1: then code as 0
-## 7_total life events: if >=90th percentile; then =1 --- if <90th percentile; then =0
-## 8_area deprivation: if <=10th percentile; then =1 --- if >10th percentile; then =0
-
+## 7_area deprivation: if <=10th percentile; then =1 --- if >10th percentile; then =0
+# For sensitivity analysis 2 (P=0.5)
+## 8-neighborhood_crime_y
+## 9-neighborhood2r_p
 dataset <- dataset %>%
     mutate(
         fam_under_poverty_line = case_when(household_income <= 4 ~ 1, household_income >= 6 ~ 0, TRUE ~ NA_real_), # group 5: 1/2 above, 1/2 below poverty line --> NA
@@ -73,11 +74,9 @@ dataset <- dataset %>%
         head_injuries = case_when(medhx_ss_6i_times_p_l > 0 ~ 1, TRUE ~ as.numeric(medhx_ss_6i_times_p_l)),
         tbi_worst_overall = case_when(tbi_ss_worst_overall_l == 1 ~ 0, tbi_ss_worst_overall_l > 1 ~ 1, TRUE ~ as.numeric(tbi_ss_worst_overall_l)),
         neighborh_notsafe = case_when(neighborhood3r_p <= 2 ~ 1, neighborhood3r_p > 2 ~ 0, TRUE ~ as.numeric(neighborhood3r_p)),
+        neighborh_notsafe_y = case_when(neighborhood_crime_y <= 2 ~ 1, neighborhood_crime_y > 2 ~ 0, TRUE ~ as.numeric(neighborhood_crime_y)),
+        neighborh_violence = case_when(neighborhood2r_p <= 2 ~ 1, neighborhood2r_p > 2 ~ 0, TRUE ~ as.numeric(neighborhood2r_p)),
         discrimination = case_when(dim_y_ss_mean == 1 ~ 0, dim_y_ss_mean > 1 ~ 1, TRUE ~ as.numeric(dim_y_ss_mean)),
-        # ple_total_bad_90perc =
-        #     case_when(ple_y_ss_total_bad >= (quantile(dataset$ple_y_ss_total_bad, probs = 0.9, na.rm = T)) ~ 1,
-        #               ple_y_ss_total_bad < (quantile(dataset$ple_y_ss_total_bad, probs = 0.9, na.rm = T)) ~ 0,
-        #               TRUE ~ NA_real_), # risk # TOP 10% ~ 1
         ADI_10perc =
             case_when(reshist_addr1_adi_perc <= (quantile(dataset$reshist_addr1_adi_perc, probs = 0.1, na.rm = T)) ~ 1,
                       reshist_addr1_adi_perc > (quantile(dataset$reshist_addr1_adi_perc, probs = 0.1, na.rm = T)) ~ 0,

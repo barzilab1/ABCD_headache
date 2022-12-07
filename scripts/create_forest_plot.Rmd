@@ -18,7 +18,7 @@ library(ggplot2)
 ```
 
 ```{r}
-univariate_headache_plot <- readRDS("../outputs/univariate_plot_abcdgr1_coef_11142.rds") 
+univariate_headache_plot <- readRDS("../outputs/univariate_plot_abcdgr1_coef_120722.rds") 
 
 univariate_headache_plot <- univariate_headache_plot %>% 
     select(Exposure = variable, everything()) %>% 
@@ -60,7 +60,7 @@ univariate_headache_plot <- univariate_headache_plot %>% arrange(desc(beta))
 
 
 # Forestplot
-png(file='../plots/forestplot_sig_vars_111422.png', units="in", width=12, height=8, res=620)
+png(file='../plots/forestplot_sig_vars_120722.png', units="in", width=17, height=8, res=620)
 
 forestplot(
   df = univariate_headache_plot,
@@ -73,11 +73,11 @@ forestplot(
            plot.title = element_text(hjust = 0.5),
            axis.text.x = element_text(size = 16),
            axis.text.y = element_text(size = 15),
-           axis.title.x = element_text(size = 17)
+           axis.title.x = element_text(size = 17, face = "bold")
            ) +
         xlim(-1,6) +
     scale_x_continuous(limits = c(0, 7), breaks = seq(0, 7.5, 1)) +
-    xlab("Odds Ratios")
+    xlab("Odds Ratios (90% Confidence Interval)")
 dev.off() 
 ```
 

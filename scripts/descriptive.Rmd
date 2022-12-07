@@ -25,10 +25,10 @@ data_long <- read.csv("../outputs/dataset_long.csv")
 ```{r}
 # table 1: by headache ever
 table1_var <- data_wide %>% 
-    select(matches(c("age_years__2y", "sex_br", "race", "ethnicity", "poverty_line$", "edu$"))) %>% 
+    select(matches(c("age_years__2y", "sex_br", "race", "ethnicity", "_income$"))) %>% #"poverty_line$", 
     names()
 
-table1_factor <- table1_var[!table1_var %in% c("age_years__2y", "parents_avg_edu")]
+table1_factor <- table1_var[!table1_var %in% c("age_years__2y", "household_income")]
 
 
 write.csv(
@@ -41,18 +41,17 @@ write.csv(
             includeNA = T,
             addOverall = T
         ),
-        missing = T,
         pDigits = 5,
         catDigits = 2,
         contDigits = 2
     ),
-    "../outputs/table1_main_values_111422.csv"
+    "../outputs/table1_main_values_120722.csv"
 )
 
 
 # FDR-adjusted p-values
 table1_adj_p <- 
-    round(p.adjust(c(0.00293, 0.66945, 0.00001, 0.00001, 0.00002, 0.81631, 0.64358, 0.09838, 0.00009, 0.00789, 0.00001), method = "fdr"), 3)
+    round(p.adjust(c(0.03369, 0.66945, 0.00001, 0.00001, 0.00002, 0.81631, 0.64358, 0.09838, 0.00009, 0.00789, 0.00001), method = "fdr"), 3)
 
 
 # create migraine PRS among Euro ancestry (white)
@@ -60,35 +59,32 @@ table1_adj_p <-
 ```
 
 ```{r}
-# table 2: internal validation # by headache
-table2_var <- c("daily_med_2w_ever", "migraine_rescue_med_2w_ever") #, "migraine_PRS_EUR"
+# Table 2: internal validation headache and medication/PRS
+mod_headache_med1 <- glmer(data = data_long, 
+                           medhx_2q_l~Migraine.Medications_2w + scale(age_years) + scale(age_years)^2 + scale(age_years)^3 + 
+                               sex_br + race_black + race_white + ethnicity_hisp + household_income +
+                               (1 | site_id_l_br/rel_family_id/src_subject_id), family = binomial, nAGQ = 0)
 
-write.csv(
-    print(
-        CreateTableOne(
-            data = data_wide,
-            vars = table2_var,
-            strata = "headache_ever",
-            factorVars = table2_var,
-            includeNA = T,
-            addOverall = T
-        ),
-        missing = T,
-        pDigits = 5,
-        catDigits = 2,
-        contDigits = 2
-    ),
-    "../outputs/table2_main_values_111422.csv"
-)
+mod_headache_med2 <- glmer(data = data_long, 
+                           medhx_2q_l~Daily.Preventive.medications_2w + scale(age_years) + scale(age_years)^2 + scale(age_years)^3  + 
+                               sex_br + race_black + race_white + ethnicity_hisp + household_income +
+                               (1 | site_id_l_br/rel_family_id/src_subject_id), family = binomial, nAGQ = 0)
 
-table2_adj_p <- round(p.adjust(c(0.00001, 0.00001), method = "fdr"), 3)
+mod_headache_med3 <- glmer(data = data_long, 
+                           medhx_2q_l~Migraine.Rescue.medications_2w + scale(age_years) + scale(age_years)^2 + scale(age_years)^3  + 
+                               sex_br + race_black + race_white + ethnicity_hisp + household_income +
+                               (1 | site_id_l_br/rel_family_id/src_subject_id), family = binomial, nAGQ = 0)
 
-# Get number of missing data
-# questionr::freq.na(data_wide %>% select(all_of(table1_var)))
+mod_headache_prs <- glmer(data = data_long, 
+                          medhx_2q_l~migraine_PRS_EUR + scale(age_years) + scale(age_years)^2 + scale(age_years)^3  + 
+                              sex_br + race_black + race_white + ethnicity_hisp + household_income +
+                              (1 | site_id_l_br/rel_family_id/src_subject_id), family = binomial, nAGQ = 0)
+
+tab_model(mod_headache_med1, mod_headache_med2, mod_headache_med3, mod_headache_prs, show.intercept = F)
 ```
 
 ```{r}
-# eTable 3: compare missing data and non missing data
+# eTable 2: compare missing data and non missing data
 ## create the missing column for outcome
 data_wide <- data_wide %>% 
     mutate(headache_missing = case_when(is.na(headache_ever) ~ "Missing", TRUE ~ "Not missing"))
@@ -125,7 +121,7 @@ write.csv(
         catDigits = 2,
         contDigits = 2
     ),
-    "../outputs/tableS3_main_values_110922.csv"
+    "../outputs/tableS3_main_values_120722.csv"
 )
 
 # FDR-adjusted p-values
@@ -133,27 +129,32 @@ tableS3_adj_p <-
     round(p.adjust(c(0.74085, 0.00001, 0.00001, 0.36898, 0.60990, 0.72167, 0.00001, 0.82726, 0.00001, 0.92661, 0.03992, 0.00001, 0.00004, 0.00001), method = "fdr"), 3)
 ```
 
+
+
 ```{r}
-# eTable 4: internal validation headache and medication/PRS
-mod_headache_med1 <- glmer(data = data_long, 
-                           medhx_2q_l~Migraine.Medications_2w + scale(age_years) + scale(age_years)^2 + scale(age_years)^3 + 
-                               sex_br + race_black + race_white + ethnicity_hisp + household_income +
-                               (1 | site_id_l_br/rel_family_id/src_subject_id), family = binomial, nAGQ = 0)
+# etable 3: internal validation # by headache
+table2_var <- c("daily_med_2w_ever", "migraine_rescue_med_2w_ever") #, "migraine_PRS_EUR"
 
-mod_headache_med2 <- glmer(data = data_long, 
-                           medhx_2q_l~Daily.Preventive.medications_2w + scale(age_years) + scale(age_years)^2 + scale(age_years)^3  + 
-                               sex_br + race_black + race_white + ethnicity_hisp + household_income +
-                               (1 | site_id_l_br/rel_family_id/src_subject_id), family = binomial, nAGQ = 0)
+write.csv(
+    print(
+        CreateTableOne(
+            data = data_wide,
+            vars = table2_var,
+            strata = "headache_ever",
+            factorVars = table2_var,
+            includeNA = T,
+            addOverall = T
+        ),
+        missing = T,
+        pDigits = 5,
+        catDigits = 2,
+        contDigits = 2
+    ),
+    "../outputs/table2_main_values_120722.csv"
+)
 
-mod_headache_med3 <- glmer(data = data_long, 
-                           medhx_2q_l~Migraine.Rescue.medications_2w + scale(age_years) + scale(age_years)^2 + scale(age_years)^3  + 
-                               sex_br + race_black + race_white + ethnicity_hisp + household_income +
-                               (1 | site_id_l_br/rel_family_id/src_subject_id), family = binomial, nAGQ = 0)
+table2_adj_p <- round(p.adjust(c(0.00001, 0.00001), method = "fdr"), 3)
 
-mod_headache_prs <- glmer(data = data_long, 
-                          medhx_2q_l~migraine_PRS_EUR + scale(age_years) + scale(age_years)^2 + scale(age_years)^3  + 
-                              sex_br + race_black + race_white + ethnicity_hisp + household_income +
-                              (1 | site_id_l_br/rel_family_id/src_subject_id), family = binomial, nAGQ = 0)
-
-tab_model(mod_headache_med1, mod_headache_med2, mod_headache_med3, mod_headache_prs, show.intercept = F)
+# Get number of missing data
+naniar::miss_var_summary(data_wide %>% filter(!is.na(headache_ever)) %>% select(all_of(table1_var)))
 ```

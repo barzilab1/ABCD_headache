@@ -89,8 +89,8 @@ tab_model(mod_headache_med1, mod_headache_med2, mod_headache_med3, mod_headache_
 data_wide <- data_wide %>% 
     mutate(headache_missing = case_when(is.na(headache_ever) ~ "Missing", TRUE ~ "Not missing"))
 
-tableS3_var <- data_wide %>% 
-    select(matches("age_years__2y|sex_br|race|ethnicity|poverty_line$|edu$|daily_med_2w_ever|migraine_rescue_med_2w_ever|PRS")) %>% 
+etable2_var <- data_wide %>% 
+    select(matches("age_years__2y|sex_br|race|ethnicity|income$|edu$|daily_med_2w_ever|migraine_rescue_med_2w_ever|PRS_")) %>% 
     names()
 
 
@@ -98,7 +98,7 @@ write.csv(
     print(
         CreateTableOne(
             data = data_wide,
-            vars = tableS3_var,
+            vars = etable2_var,
             strata = "headache_missing",
             factorVars = c(
                 "sex_br",
@@ -121,12 +121,12 @@ write.csv(
         catDigits = 2,
         contDigits = 2
     ),
-    "../outputs/tableS3_main_values_120722.csv"
+    "../outputs/etable2_main_values_120722.csv"
 )
 
 # FDR-adjusted p-values
-tableS3_adj_p <- 
-    round(p.adjust(c(0.74085, 0.00001, 0.00001, 0.36898, 0.60990, 0.72167, 0.00001, 0.82726, 0.00001, 0.92661, 0.03992, 0.00001, 0.00004, 0.00001), method = "fdr"), 3)
+etable2_adj_p <- 
+    round(p.adjust(c(.74941, 0.00001, 0.00001, 0.36594, 0.61156, 0.71581, 0.00001, 0.81857, 0.00001, 0.91797, 0.81678, 0.00001, 0.00001, 0.00001, 0.00004), method = "fdr"), 3)
 ```
 
 

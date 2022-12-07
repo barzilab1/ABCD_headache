@@ -1,0 +1,93 @@
+---
+title: "Create wide data"
+author: "Kate Tran"
+date: "10/4/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(dplyr)
+library(tidyr)
+library(janitor)
+library(readr)
+
+source("../utility_fun.R")
+```
+
+```{r}
+# Choose variables needed for table 1
+# headache never 0s at all timepoints - compare demo, med, PRS, domains of exposomes
+# Compare included and not included demo variables in supp (not age) sex race edu income
+data_long <- read.csv("../outputs/dataset_long.csv")
+data_long <- data_long %>% 
+    dplyr::select(matches(c("src", "eventn", "age_years", "sex_br", "race", "eth", "edu", "household_in", 
+                     "medhx_[26][qij]", "[mM]edications_2", "site", "_PRS", "genetic_afr"))) %>% 
+    mutate(eventname = recode(eventname,
+                              baseline_year_1_arm_1 = "baseline",
+                              `1_year_follow_up_y_arm_1` = "1y",
+                              `2_year_follow_up_y_arm_1` = "2y"))
+```
+
+```{r}
+data_wide <-
+    data_long %>% 
+    pivot_wider(., names_from = eventname, 
+                values_from = c(age_years, parents_avg_edu:site_id_l_br),
+                names_sep = "__") %>%
+    remove_empty(., which = c("rows", "cols"), quiet = TRUE) %>%
+    # rename variables to use later
+    dplyr::rename(
+        # use site id at 1-year
+        site_id_l_br = "site_id_l_br__1y",
+        # use parent education at 1y
+        parents_avg_edu = "parents_avg_edu__1y",
+        # use household income at 2y
+        household_income = "household_income__2y"
+    )
+```
+
+# Create ever variables
+```{r}
+data_wide$headache_ever <- apply(data_wide[, grepl("medhx_2q", colnames(data_wide))], 1, function(x) {any(x == 1)*1}) # headache
+data_wide$head_injury_ever <- apply(data_wide[, grepl("medhx_6i", colnames(data_wide))], 1, function(x) {any(x == 1)*1}) # head injury
+data_wide$knocked_unconsc_ever <- apply(data_wide[, grepl("medhx_6j", colnames(data_wide))], 1, function(x) {any(x == 1)*1}) # knocked unconscious
+
+data_wide$age_years_mean <- rowMeans(data_wide[, which(grepl("age_years", colnames(data_wide)))], na.rm = T)
+data_wide$dhea_mean <- rowMeans(data_wide[, which(grepl("dhea", colnames(data_wide)))], na.rm = T)
+data_wide$hse_mean <- rowMeans(data_wide[, which(grepl("hse", colnames(data_wide)))], na.rm = T)
+data_wide$ert_mean <- rowMeans(data_wide[, which(grepl("ert", colnames(data_wide)))], na.rm = T)
+
+data_wide <- create_ever_var(data = data_wide, search_term = "Migraine.Medications_2w__", new_col_name = "migraine_med_2w_ever")
+data_wide <- create_ever_var(data = data_wide, search_term = "Daily.Preventive.medications_2w__", new_col_name = "daily_med_2w_ever")
+data_wide <- create_ever_var(data = data_wide, search_term = "Rescue.Medications_2w__", new_col_name = "rescue_med_2w_ever")
+data_wide <- create_ever_var(data = data_wide, search_term = "Migraine.Rescue.medications_2w__", new_col_name = "migraine_rescue_med_2w_ever")
+```
+
+```{r}
+data_wide <- data_wide %>% 
+    mutate(migraine_PRS_EUR = case_when(genetic_afr == 0 ~ migraine_PRS,
+                                        TRUE ~ NA_real_),
+           fam_under_poverty_line = case_when(household_income <= 4 ~ 1, household_income >= 6 ~ 0, TRUE ~ NA_real_))
+```
+
+```{r}
+write.csv(data_wide, "../outputs/dataset_wide.csv")
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+

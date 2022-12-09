@@ -58,14 +58,14 @@ var_headache_0 <- "(1 | site_id_l_br/rel_family_id/src_subject_id)"
 
 output <- data.frame("variable" = NA, "Odds ratio" = NA, "p_value" = NA, "std.error" = NA, "low_ci" = NA, "high_ci" = NA)
 
-# Significant (p-value <= 0.1)
+# Significant (p-value <= 0.05)
 univariate_headache_1toall <- vars[1:length(vars)] %>%  
-    map_dfr(~get_est(outcome = "medhx_2q_l", predictor = .x, variables = var_headache_0, data = abcd_gr1, estimate = "OR", output = output, conf_int = 0.9))
+    map_dfr(~get_est(outcome = "medhx_2q_l", predictor = .x, variables = var_headache_0, data = abcd_gr1, estimate = "OR", output = output, conf_int = 0.95))
 
 univariate_headache_1toall <- univariate_headache_1toall %>% 
-    mutate(significant = case_when(p_value <= 0.1 ~ "sig", TRUE ~ NA_character_))
+    mutate(significant = case_when(p_value <= 0.05 ~ "sig", TRUE ~ NA_character_))
 
-writexl::write_xlsx(univariate_headache_1toall, "../outputs/univariate_headache_1toall_111422_abcd.xlsx")
+writexl::write_xlsx(univariate_headache_1toall, "../outputs/univariate_headache_1toall_120822_abcd.xlsx")
 ```
 
 ```{r}
@@ -75,38 +75,36 @@ sig_vars <- univariate_headache_1toall %>% filter(significant == "sig") %>% sele
 # Forest plot
 output_plot <- data.frame("variable" = NA, "coef" = NA, "p_value" = NA, "std.error" = NA, "low_ci" = NA, "high_ci" = NA)
 univariate_plot <- sig_vars %>%
-    map_dfr(~get_est(outcome = "medhx_2q_l", predictor = .x, variables = var_headache_0, data = abcd_gr1, estimate = "coef", output = output_plot, conf_int = 0.9))
-saveRDS(univariate_plot, file = "../outputs/univariate_plot_abcdgr1_coef_120722.rds")
+    map_dfr(~get_est(outcome = "medhx_2q_l", predictor = .x, variables = var_headache_0, data = abcd_gr1, estimate = "coef", output = output_plot, conf_int = 0.95))
+saveRDS(univariate_plot, file = "../outputs/univariate_plot_abcdgr1_coef_120922.rds")
 ```
 
 ```{r}
 # Get weight from abcd_gr1 # but use binary variables only
 # Replace continuous variables in sig_vars by binary variables
-sig_vars_bin <- sig_vars
-sig_vars_bin[sig_vars_bin == "neighborhood3r_p"] <- "neighborh_notsafe"
-sig_vars_bin[sig_vars_bin == "neighborhood3r_p"] <- NULL
 
 # Run the logistic regression of significant variables on the second half of the data
 output_testing <- data.frame("variable" = NA, "coef" = NA, "p_value" = NA, "std.error" = NA, "low_ci" = NA, "high_ci" = NA)
+
+sig_vars_bin <- sig_vars
+# Dichotomize 1 Likert variable
+sig_vars_bin[sig_vars_bin == "tbi_ss_worst_overall_l"] <- "tbi_worst_overall"
+sig_vars_bin[sig_vars_bin == "tbi_ss_worst_overall_l"] <- NULL
+
+# Get coefficients (weight) for all variables including new dichotomized variables
 univariate_testing <- sig_vars_bin %>%  
-    map_dfr(~get_est(outcome = "medhx_2q_l", predictor = .x, variables = var_headache_0, data = abcd_gr1, estimate = "coef", output = output_testing, conf_int = 0.9))
+    map_dfr(~get_est(outcome = "medhx_2q_l", predictor = .x, variables = var_headache_0, data = abcd_gr1, estimate = "coef", output = output_testing, conf_int = 0.95))
 
-# Coefficients are the weight of each exposure
-weight <- univariate_testing %>% select(coef) %>% pull()
-
-# make sure all variables are in the same order as in weight
-## abcd_gr2[, c(which(names(abcd_gr2) %in% sig_vars_bin))] will not give correct answers
+weight <- univariate_testing %>% arrange(coef) %>% select(coef) %>% pull()
+# Make sure columns in abcd_gr2 same order as in weight
 abcd_gr2_weight <- transform(abcd_gr2, weighted_exposome = 
                                    rowSums(
-                                       sweep(abcd_gr2 %>% select(household_income, medhx_ss_6i_times_p_l, medhx_ss_6j_times_p_l, tbi_ss_worst_overall_l, 
-                                                                 medhx_6i_l, tbi_1, tbi_3, tbi_7a,
-                                                                 dim_yesno_q1, neighborh_notsafe, famhx_ss_momdad_alc_p, famhx_ss_momdad_dg_p, famhx_ss_momdad_dprs_p, 
-                                                                 ple_ill_y, ple_arrest_y, ple_separ_y, ple_law_y, ple_jail_y, ple_step_y,             
-                                                                 dim_y_ss_mean, reshist_addr1_adi_perc), 2, weight, `*`), 
+                                       sweep(abcd_gr2 %>% select(all_of(univariate_testing %>% arrange(coef) %>% select(variable) %>% pull())), 2, weight, `*`), 
                                        na.rm = T))
 ```
 
 ```{r}
+# Table 3
 mod1 <- glmer(medhx_2q_l ~ (1 | site_id_l_br/rel_family_id/src_subject_id) + 
                    age_years + age_years^2 + age_years^3 + sex_br + household_income, 
               nAGQ = 0, family = binomial, data = abcd_gr2_weight %>% filter(genetic_afr == 0)) # EUR ancestry
@@ -148,6 +146,7 @@ round(p.adjust(c(5.041e-10, 0.0005374, 0.0009378, 8.566e-10, 0.1062), method = "
 
 # Supplement - models on whole cohort
 ```{r}
+# eTable 5
 mod21 <- glmer(medhx_2q_l ~ (1 | site_id_l_br/rel_family_id/src_subject_id) + age_years + age_years^2 + age_years^3 + sex_br + household_income, 
               nAGQ = 0, family = binomial, data = abcd_gr2_weight) # all population
 

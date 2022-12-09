@@ -44,7 +44,7 @@ data_wide <-
         # use site id at 1-year
         site_id_l_br = "site_id_l_br__1y",
         # use parent education at 1y
-        parents_avg_edu = "parents_avg_edu__1y",
+        # parents_avg_edu = "parents_avg_edu__1y",
         # use household income at 2y
         household_income = "household_income__2y"
     )
@@ -70,8 +70,7 @@ data_wide <- create_ever_var(data = data_wide, search_term = "Migraine.Rescue.me
 ```{r}
 data_wide <- data_wide %>% 
     mutate(migraine_PRS_EUR = case_when(genetic_afr == 0 ~ migraine_PRS,
-                                        TRUE ~ NA_real_),
-           fam_under_poverty_line = case_when(household_income <= 4 ~ 1, household_income >= 6 ~ 0, TRUE ~ NA_real_))
+                                        TRUE ~ NA_real_))
 ```
 
 ```{r}

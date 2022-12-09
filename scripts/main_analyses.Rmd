@@ -58,12 +58,12 @@ var_headache_0 <- "(1 | site_id_l_br/rel_family_id/src_subject_id)"
 
 output <- data.frame("variable" = NA, "Odds ratio" = NA, "p_value" = NA, "std.error" = NA, "low_ci" = NA, "high_ci" = NA)
 
-# Significant (p-value <= 0.05)
+# Significant (p-value <= 0.1)
 univariate_headache_1toall <- vars[1:length(vars)] %>%  
-    map_dfr(~get_est(outcome = "medhx_2q_l", predictor = .x, variables = var_headache_0, data = abcd_gr1, estimate = "OR", output = output, conf_int = 0.95))
+    map_dfr(~get_est(outcome = "medhx_2q_l", predictor = .x, variables = var_headache_0, data = abcd_gr1, estimate = "OR", output = output, conf_int = 0.9))
 
 univariate_headache_1toall <- univariate_headache_1toall %>% 
-    mutate(significant = case_when(p_value <= 0.05 ~ "sig", TRUE ~ NA_character_))
+    mutate(significant = case_when(p_value <= 0.1 ~ "sig", TRUE ~ NA_character_))
 
 writexl::write_xlsx(univariate_headache_1toall, "../outputs/univariate_headache_1toall_120822_abcd.xlsx")
 ```
@@ -75,7 +75,7 @@ sig_vars <- univariate_headache_1toall %>% filter(significant == "sig") %>% sele
 # Forest plot
 output_plot <- data.frame("variable" = NA, "coef" = NA, "p_value" = NA, "std.error" = NA, "low_ci" = NA, "high_ci" = NA)
 univariate_plot <- sig_vars %>%
-    map_dfr(~get_est(outcome = "medhx_2q_l", predictor = .x, variables = var_headache_0, data = abcd_gr1, estimate = "coef", output = output_plot, conf_int = 0.95))
+    map_dfr(~get_est(outcome = "medhx_2q_l", predictor = .x, variables = var_headache_0, data = abcd_gr1, estimate = "coef", output = output_plot, conf_int = 0.9))
 saveRDS(univariate_plot, file = "../outputs/univariate_plot_abcdgr1_coef_120922.rds")
 ```
 
@@ -87,13 +87,15 @@ saveRDS(univariate_plot, file = "../outputs/univariate_plot_abcdgr1_coef_120922.
 output_testing <- data.frame("variable" = NA, "coef" = NA, "p_value" = NA, "std.error" = NA, "low_ci" = NA, "high_ci" = NA)
 
 sig_vars_bin <- sig_vars
-# Dichotomize 1 Likert variable
+# Dichotomize 2 Likert variables
 sig_vars_bin[sig_vars_bin == "tbi_ss_worst_overall_l"] <- "tbi_worst_overall"
+sig_vars_bin[sig_vars_bin == "neighborhood3r_p"] <- "neighborh_notsafe"
 sig_vars_bin[sig_vars_bin == "tbi_ss_worst_overall_l"] <- NULL
+sig_vars_bin[sig_vars_bin == "neighborhood3r_p"] <- NULL
 
 # Get coefficients (weight) for all variables including new dichotomized variables
 univariate_testing <- sig_vars_bin %>%  
-    map_dfr(~get_est(outcome = "medhx_2q_l", predictor = .x, variables = var_headache_0, data = abcd_gr1, estimate = "coef", output = output_testing, conf_int = 0.95))
+    map_dfr(~get_est(outcome = "medhx_2q_l", predictor = .x, variables = var_headache_0, data = abcd_gr1, estimate = "coef", output = output_testing, conf_int = 0.9))
 
 weight <- univariate_testing %>% arrange(coef) %>% select(coef) %>% pull()
 # Make sure columns in abcd_gr2 same order as in weight

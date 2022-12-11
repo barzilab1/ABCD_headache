@@ -9,11 +9,11 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+# Library
 ```{r}
 library(dplyr)
 library(purrr)
 library(sjPlot)
-# library(parameters)
 library(stringr)
 library(performance)
 library(janitor)
@@ -21,6 +21,7 @@ library(janitor)
 source("../utility_fun.R")
 ```
 
+# Read data
 ```{r}
 data_long <- read.csv("../outputs/dataset_long.csv")
 
@@ -30,9 +31,8 @@ matched_data <- matched_data %>%
            participant_id = str_replace_all(participant_id, "NDAR", "NDAR_"))
 ```
 
+# Create discovery and testing subsets
 ```{r}
-## Create 2 different datasets, run univariate models on the first half
-
 # Get IDs of participants in group 1
 id_gr1 <- matched_data %>% filter(matched_group == 1) %>% select(participant_id) %>% pull()
 id_gr2 <- matched_data %>% filter(matched_group == 2) %>% select(participant_id) %>% pull()
@@ -46,6 +46,7 @@ saveRDS(abcd_gr1, file = "../outputs/abcd_gr1.rds")
 saveRDS(abcd_gr2, file = "../outputs/abcd_gr2.rds")
 ```
 
+# Univariate models on abcd_gr1
 ```{r}
 # Run univariate models on the first half of the data: abcd_gr1
 vars <- data_long %>% 
@@ -68,6 +69,7 @@ univariate_headache_1toall <- univariate_headache_1toall %>%
 writexl::write_xlsx(univariate_headache_1toall, "../outputs/univariate_headache_1toall_120822_abcd.xlsx")
 ```
 
+# Create data for forest plot
 ```{r}
 # Choose significant elements
 sig_vars <- univariate_headache_1toall %>% filter(significant == "sig") %>% select(variable) %>% pull()
@@ -79,6 +81,7 @@ univariate_plot <- sig_vars %>%
 saveRDS(univariate_plot, file = "../outputs/univariate_plot_abcdgr1_coef_120922.rds")
 ```
 
+# Generate exposome score
 ```{r}
 # Get weight from abcd_gr1 # but use binary variables only
 # Replace continuous variables in sig_vars by binary variables
@@ -105,6 +108,7 @@ abcd_gr2_weight <- transform(abcd_gr2, weighted_exposome =
                                        na.rm = T))
 ```
 
+# Multivariate models in the main result
 ```{r}
 # Table 3
 mod1 <- glmer(medhx_2q_l ~ (1 | site_id_l_br/rel_family_id/src_subject_id) + 

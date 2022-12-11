@@ -2,9 +2,24 @@
 title: "Sensitivity analysis"
 author: "Kate Tran"
 date: "11/4/2022"
-output: html_document
+output: 
+  html_document:
+    df_print: paged
+    theme: flatly
+    highlight: haddock
+    toc: yes
+    toc_depth: 6
+    toc_float:
+      collapsed: false
+      smooth_scroll: true
+    code_folding: hide
 ---
-
+<style type="text/css">
+.main-container {
+  max-width: 1800px;
+  margin-left: auto;
+  margin-right: auto;
+</style>
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```

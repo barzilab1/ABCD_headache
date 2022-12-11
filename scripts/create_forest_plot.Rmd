@@ -18,7 +18,7 @@ library(ggplot2)
 ```
 
 ```{r}
-univariate_headache_plot <- readRDS("../outputs/univariate_plot_abcdgr1_coef_120722.rds") 
+univariate_headache_plot <- readRDS("../outputs/univariate_plot_abcdgr1_coef_120922.rds") 
 
 univariate_headache_plot <- univariate_headache_plot %>% 
     select(Exposure = variable, everything()) %>% 

@@ -94,31 +94,45 @@ anova(mod4.1, mod5.1, test="Chisq")
 round(p.adjust(c(4.87e-08, 0.0005374, 0.0009536, 8.44e-08, 0.1282), method = "fdr"), 3)
 ```
 
-# Sensitivity analysis 2: P-threshold = 0.5
+# Sensitivity analysis 2: P-threshold = 0.05
 ```{r}
-# Significant variables are those with P <= 0.5 from univariate_headache_1toall object in the main analysis
-# Rerun all models with 50% CI
+# Significant variables are those with P <= 0.1 from univariate_headache_1toall object in the main analysis
+# Rerun all models with 90% CI
+# univariate_testing <- sig_vars_bin %>%  
+#     map_dfr(~get_est(outcome = "medhx_2q_l", predictor = .x, variables = var_headache_0, data = abcd_gr1, estimate = "coef", output = output_testing, conf_int = 0.95))
+# 
+# # Coefficients are the weight of each exposure
+# weight <- univariate_testing %>% select(coef) %>% pull()
+# 
+# # make sure all variables are in the same order as in weight
+# ## abcd_gr2[, c(which(names(abcd_gr2) %in% sig_vars_bin))] will not give correct answers
+# abcd_gr2_weight <- transform(abcd_gr2, weighted_exposome = 
+#                                    rowSums(
+#                                        sweep(abcd_gr2 %>% select(household_income, medhx_ss_6i_times_p_l, medhx_ss_6j_times_p_l, tbi_ss_worst_overall_l, 
+#                                                                  medhx_6i_l, tbi_1, tbi_3, tbi_7a,
+#                                                                  dim_yesno_q1, neighborh_notsafe, famhx_ss_momdad_alc_p, famhx_ss_momdad_dg_p, famhx_ss_momdad_dprs_p, 
+#                                                                  ple_ill_y, ple_arrest_y, ple_separ_y, ple_law_y, ple_jail_y, ple_step_y,             
+#                                                                  dim_y_ss_mean, reshist_addr1_adi_perc), 2, weight, `*`), 
+#                                        na.rm = T))
+
+
 vars <- abcd_gr1 %>% 
     dplyr::select(matches(c("d_inc|famhx_ss_mom|dim_y|harm(2?)$|bully|hood(_?)[^_P]|nsc_|adi.*_[irmp]|pmq|fes_y.*_fc$|crpbi|srpf|macv_y.*fs|ple.*[^fu]_(y|fu_y_bad)$|hx.*[26][ij]|tbi.*_l$|tbi_[123457]|cat$"))) %>% names()
 
-# Significant (p-value <= 0.5)
+# Significant (p-value <= 0.05)
 univariate_headache_sens2 <- vars[1:length(vars)] %>%  
-    map_dfr(~get_est(outcome = "medhx_2q_l", predictor = .x, variables = var_headache_0, data = abcd_gr1, estimate = "OR", output = output_sens, conf_int = 0.5))
+    map_dfr(~get_est(outcome = "medhx_2q_l", predictor = .x, variables = var_headache_0, data = abcd_gr1, estimate = "OR", output = output_sens, conf_int = 0.95))
 
-# Get the list of significant variables at )=0.5
-sig_vars_sens2 <- univariate_headache_sens2 %>% filter(p_value <= 0.5) %>% select(variable) %>% pull()
+# Get the list of significant variables at )=0.05
+sig_vars_sens2 <- univariate_headache_sens2 %>% filter(p_value <= 0.05) %>% select(variable) %>% pull()
 
-# Dichotomize 1 Likert variable neighborhood3r_p
-sig_vars_sens2[sig_vars_sens2 == "neighborhood3r_p"] <- "neighborh_notsafe"
-sig_vars_sens2[sig_vars_sens2 == "neighborhood_crime_y"] <- "neighborh_notsafe_y"
-sig_vars_sens2[sig_vars_sens2 == "neighborhood2r_p"] <- "neighborh_violence"
-sig_vars_sens2[sig_vars_sens2 == "neighborhood3r_p"] <- NULL
-sig_vars_sens2[sig_vars_sens2 == "neighborhood_crime_y"] <- NULL
-sig_vars_sens2[sig_vars_sens2 == "neighborhood2r_p"] <- NULL
+# Dichotomize 1 Likert variable tbi_ss_worst_overall_l
+sig_vars_sens2[sig_vars_sens2 == "tbi_ss_worst_overall_l"] <- "tbi_worst_overall"
+sig_vars_sens2[sig_vars_sens2 == "tbi_ss_worst_overall_l"] <- NULL
 
 # Get coefficients (weight) for all variables including new dichotomized variables
 univariate_sens2 <- sig_vars_sens2 %>%  
-    map_dfr(~get_est(outcome = "medhx_2q_l", predictor = .x, variables = var_headache_0, data = abcd_gr1, estimate = "coef", output = output_sens, conf_int = 0.5))
+    map_dfr(~get_est(outcome = "medhx_2q_l", predictor = .x, variables = var_headache_0, data = abcd_gr1, estimate = "coef", output = output_sens, conf_int = 0.95))
 
 weight_sens2 <- univariate_sens2 %>% arrange(coef) %>% select(coef) %>% pull()
 # Make sure columns in abcd_gr2 same order as in weight_sens2
@@ -166,7 +180,7 @@ anova(mod3.2, mod4.2, test="Chisq")
 anova(mod4.2, mod5.2, test="Chisq") 
 
 # adj p
-round(p.adjust(c(2.008e-07, 0.0005374, 0.0009672, 3.534e-07, 0.31), method = "fdr"), 3) 
+round(p.adjust(c(1.085e-09, 0.0005374, 0.0008845, 1.745e-09, 0.1643), method = "fdr"), 3) 
 ```
 
 

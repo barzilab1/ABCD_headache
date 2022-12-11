@@ -2,28 +2,14 @@
 title: "Sensitivity analysis"
 author: "Kate Tran"
 date: "11/4/2022"
-output: 
-  html_document:
-    df_print: paged
-    theme: flatly
-    highlight: haddock
-    toc: yes
-    toc_depth: 6
-    toc_float:
-      collapsed: false
-      smooth_scroll: true
-    code_folding: hide
+output: html_document
 ---
-<style type="text/css">
-.main-container {
-  max-width: 1800px;
-  margin-left: auto;
-  margin-right: auto;
-</style>
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+# Library
 ```{r}
 library(readr)
 library(dplyr)
@@ -33,6 +19,7 @@ library(performance)
 source("../utility_fun.R")
 ```
 
+# Read discovery (abcd_gr1) and testing (abcd_gr2) data
 ```{r}
 abcd_gr1 <- read_rds("../outputs/abcd_gr1.rds")
 abcd_gr2 <- read_rds("../outputs/abcd_gr2.rds")

@@ -98,26 +98,6 @@ round(p.adjust(c(4.87e-08, 0.0005374, 0.0009536, 8.44e-08, 0.1282), method = "fd
 
 # Sensitivity analysis 2: P-threshold = 0.05
 ```{r}
-# Significant variables are those with P <= 0.1 from univariate_headache_1toall object in the main analysis
-# Rerun all models with 90% CI
-# univariate_testing <- sig_vars_bin %>%  
-#     map_dfr(~get_est(outcome = "medhx_2q_l", predictor = .x, variables = var_headache_0, data = abcd_gr1, estimate = "coef", output = output_testing, conf_int = 0.95))
-# 
-# # Coefficients are the weight of each exposure
-# weight <- univariate_testing %>% select(coef) %>% pull()
-# 
-# # make sure all variables are in the same order as in weight
-# ## abcd_gr2[, c(which(names(abcd_gr2) %in% sig_vars_bin))] will not give correct answers
-# abcd_gr2_weight <- transform(abcd_gr2, weighted_exposome = 
-#                                    rowSums(
-#                                        sweep(abcd_gr2 %>% select(household_income, medhx_ss_6i_times_p_l, medhx_ss_6j_times_p_l, tbi_ss_worst_overall_l, 
-#                                                                  medhx_6i_l, tbi_1, tbi_3, tbi_7a,
-#                                                                  dim_yesno_q1, neighborh_notsafe, famhx_ss_momdad_alc_p, famhx_ss_momdad_dg_p, famhx_ss_momdad_dprs_p, 
-#                                                                  ple_ill_y, ple_arrest_y, ple_separ_y, ple_law_y, ple_jail_y, ple_step_y,             
-#                                                                  dim_y_ss_mean, reshist_addr1_adi_perc), 2, weight, `*`), 
-#                                        na.rm = T))
-
-
 vars <- abcd_gr1 %>% 
     dplyr::select(matches(c("d_inc|famhx_ss_mom|dim_y|harm(2?)$|bully|hood(_?)[^_P]|nsc_|adi.*_[irmp]|pmq|fes_y.*_fc$|crpbi|srpf|macv_y.*fs|ple.*[^fu]_(y|fu_y_bad)$|hx.*[26][ij]|tbi.*_l$|tbi_[123457]|cat$"))) %>% names()
 

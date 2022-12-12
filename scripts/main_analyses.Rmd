@@ -106,6 +106,8 @@ abcd_gr2_weight <- transform(abcd_gr2, weighted_exposome =
                                    rowSums(
                                        sweep(abcd_gr2 %>% select(all_of(univariate_testing %>% arrange(coef) %>% select(variable) %>% pull())), 2, weight, `*`), 
                                        na.rm = T))
+
+# saveRDS(abcd_gr2_weight, file = "../outputs/abcd_gr2_weight.rds")
 ```
 
 # Multivariate models in the main result
@@ -128,8 +130,8 @@ mod4 <- glmer(medhx_2q_l ~ scale(weighted_exposome) + migraine_PRS_EUR + (1 | si
               nAGQ = 0, family = binomial, data = abcd_gr2_weight %>% filter(genetic_afr == 0))
 
 mod5 <- glmer(medhx_2q_l ~ scale(weighted_exposome) * migraine_PRS_EUR + (1 | site_id_l_br/rel_family_id/src_subject_id) + 
-                   age_years + age_years^2 + age_years^3 + sex_br + household_income, nAGQ = 0, family = binomial, 
-               data = abcd_gr2_weight %>% filter(genetic_afr == 0))
+                   age_years + age_years^2 + age_years^3 + sex_br + household_income, 
+              nAGQ = 0, family = binomial, data = abcd_gr2_weight %>% filter(genetic_afr == 0))
 
 com1 <- tab_model(mod1, mod2, mod3, mod4, mod5)
 
@@ -153,10 +155,12 @@ round(p.adjust(c(5.041e-10, 0.0005374, 0.0009378, 8.566e-10, 0.1062), method = "
 # Supplement - models on whole cohort
 ```{r}
 # eTable 5
-mod21 <- glmer(medhx_2q_l ~ (1 | site_id_l_br/rel_family_id/src_subject_id) + age_years + age_years^2 + age_years^3 + sex_br + household_income, 
+mod21 <- glmer(medhx_2q_l ~ (1 | site_id_l_br/rel_family_id/src_subject_id) + age_years + age_years^2 + age_years^3 + 
+                   sex_br + race_black + race_white + ethnicity_hisp + household_income, 
               nAGQ = 0, family = binomial, data = abcd_gr2_weight) # all population
 
-mod22 <- glmer(medhx_2q_l ~ weighted_exposome + (1 | site_id_l_br/rel_family_id/src_subject_id) + age_years + age_years^2 + age_years^3 + sex_br + household_income, 
+mod22 <- glmer(medhx_2q_l ~ weighted_exposome + (1 | site_id_l_br/rel_family_id/src_subject_id) + age_years + age_years^2 + age_years^3 + 
+                   sex_br + race_black + race_white + ethnicity_hisp + household_income, 
               nAGQ = 0, family = binomial, data = abcd_gr2_weight) # all population
 
 com2 <- tab_model(mod21, mod22)

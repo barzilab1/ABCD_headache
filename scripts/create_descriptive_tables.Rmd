@@ -23,6 +23,19 @@ data_long <- read.csv("../outputs/dataset_long.csv")
 ```
 
 ```{r}
+# Numbers in abstract
+## Total N
+N <- length(unique(data_wide$src_subject_id))
+## Mean age at baseline
+data_long %>% filter(eventname == "baseline_year_1_arm_1") %>% summarise(mean = mean(interview_age, na.rm = T)/12)
+## % of females
+prop.table(table(data_wide$sex_br))
+## % of headache
+table(data_wide$headache_ever) # 907
+907/N
+```
+
+```{r}
 # table 1: by headache ever
 table1_var <- data_wide %>% 
     select(matches(c("age_years__2y", "sex_br", "race", "ethnicity", "_income$"))) %>% #"poverty_line$", 
@@ -62,22 +75,22 @@ table1_adj_p <-
 # Table 2: internal validation headache and medication/PRS
 mod_headache_med1 <- glmer(data = data_long, 
                            medhx_2q_l~Migraine.Medications_2w + scale(age_years) + scale(age_years)^2 + scale(age_years)^3 + 
-                               sex_br + race_black + race_white + ethnicity_hisp + household_income +
+                               sex_br + race_black + race_white + household_income + ethnicity_hisp +
                                (1 | site_id_l_br/rel_family_id/src_subject_id), family = binomial, nAGQ = 0)
 
 mod_headache_med2 <- glmer(data = data_long, 
                            medhx_2q_l~Daily.Preventive.medications_2w + scale(age_years) + scale(age_years)^2 + scale(age_years)^3  + 
-                               sex_br + race_black + race_white + ethnicity_hisp + household_income +
+                               sex_br + race_black + race_white + household_income + ethnicity_hisp +
                                (1 | site_id_l_br/rel_family_id/src_subject_id), family = binomial, nAGQ = 0)
 
 mod_headache_med3 <- glmer(data = data_long, 
                            medhx_2q_l~Migraine.Rescue.medications_2w + scale(age_years) + scale(age_years)^2 + scale(age_years)^3  + 
-                               sex_br + race_black + race_white + ethnicity_hisp + household_income +
+                               sex_br + race_black + race_white + household_income + ethnicity_hisp +
                                (1 | site_id_l_br/rel_family_id/src_subject_id), family = binomial, nAGQ = 0)
 
 mod_headache_prs <- glmer(data = data_long, 
                           medhx_2q_l~migraine_PRS_EUR + scale(age_years) + scale(age_years)^2 + scale(age_years)^3  + 
-                              sex_br + race_black + race_white + ethnicity_hisp + household_income +
+                              sex_br + race_black + race_white + household_income + ethnicity_hisp +
                               (1 | site_id_l_br/rel_family_id/src_subject_id), family = binomial, nAGQ = 0)
 
 tab_model(mod_headache_med1, mod_headache_med2, mod_headache_med3, mod_headache_prs, show.intercept = F)

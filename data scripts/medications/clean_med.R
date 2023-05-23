@@ -55,7 +55,7 @@ for (j in 1:15) {
 #######################################################
 # create the medication table according to the tagging
 #######################################################
-tagged_med = read_excel(paste0(additional_files_path, "coded_meds_11102022.xlsx"))
+tagged_med = read_excel(paste0(additional_files_path, "coded_meds_40623.xlsx"))
 
 #add medication category to each child according to tagging
 last_2wk_colnames = grep("_rxnorm_(2wk_)?p$",colnames(med_dataset),value = T)

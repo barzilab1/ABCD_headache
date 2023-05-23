@@ -51,12 +51,28 @@ cb = load_instrument("abcd_cb01",abcd_files_path)
 cb[cb == 777 | cb == 999] = NA
 
 cb <- cb[, grepl("src|interview|sex|event|(_harm)$", colnames(cb))]
+
+########### Developmental History ###########
+dhx01 = load_instrument("dhx01",abcd_files_path)
+
+dhx01[dhx01 == 999 | dhx01 == -1] = NA
+dhx01$accult_select_language = NULL
+
+#remove empty columns
+dhx01 = dhx01[,colSums(is.na(dhx01)) != nrow(dhx01)]
+dhx01$devhx_1_p = NULL
+
+dhx01 <- dhx01[, grepl("src|interview|sex|event|devhx_9_(to|al)", colnames(dhx01))]
+
+
+
 ########### merge all tables
 exposome_set = merge(ydmes01, nsc01, all.y = T)
 exposome_set = merge(exposome_set, pnsc01, all.x = T)
 exposome_set = merge(exposome_set, fhxssp01, all.x = T)
 exposome_set = merge(exposome_set, yle01, all.x = T)
 exposome_set = merge(exposome_set, cb, all.x = T)
+exposome_set = merge(exposome_set, dhx01, all.x = T)
 
 write.csv(file = "outputs/family_id.csv",x = acspsw03, row.names=F, na = "")
 write.csv(file = "outputs/exposome_set.csv",x = exposome_set, row.names=F, na = "")

@@ -18,7 +18,8 @@ library(ggplot2)
 ```
 
 ```{r}
-univariate_headache_plot <- readRDS("../outputs/univariate_plot_abcdgr1_coef_120922.rds") 
+univariate_headache_plot <- readRDS("../outputs/univariate_plot_abcdgr1_coef_051523.rds") %>%  # univariate_plot_abcdgr1_coef_120922.rds
+    filter(significant_p0.1 == 1)
 
 univariate_headache_plot <- univariate_headache_plot %>% 
     select(Exposure = variable, everything()) %>% 
@@ -50,9 +51,9 @@ univariate_headache_plot <- univariate_headache_plot %>%
 
 ```{r}
 univariate_headache_plot <- univariate_headache_plot %>% 
-    dplyr::rename(name = Exposure, beta = coef, se = std.error, pvalue = p_value)
+    dplyr::rename(name = Exposure, beta = coef, se = std_error, pvalue = p_value)
 univariate_headache_plot <- univariate_headache_plot %>% 
-    select(1:4) %>% 
+    select(name, beta, se, pvalue) %>% 
     mutate(positive = case_when(beta < 0 ~ "negative", beta >= 0 ~ "positive", TRUE ~ NA_character_)) %>% 
     mutate(across(where(is.numeric), ~round(., 2)))
 
@@ -60,7 +61,7 @@ univariate_headache_plot <- univariate_headache_plot %>% arrange(desc(beta))
 
 
 # Forestplot
-png(file='../plots/forestplot_sig_vars_120722.png', units="in", width=17, height=8, res=620)
+png(file='../plots/forestplot_sig_vars_051523.png', units="in", width=17, height=8, res=620)
 
 forestplot(
   df = univariate_headache_plot,

@@ -48,8 +48,8 @@ demographics_set[, race_black:= demo_race_a_p___11  ]
 # Asian
 demographics_set[, race_asian:= 0]
 demographics_set[ (demo_race_a_p___18 == 1 | demo_race_a_p___19 == 1 | demo_race_a_p___20 == 1 |
-                       demo_race_a_p___21 == 1 | demo_race_a_p___22 == 1 | demo_race_a_p___23 == 1 |
-                       demo_race_a_p___24 ==1), race_asian:= 1 ]
+                     demo_race_a_p___21 == 1 | demo_race_a_p___22 == 1 | demo_race_a_p___23 == 1 |
+                     demo_race_a_p___24 ==1), race_asian:= 1 ]
 
 # AIAN: American Indian and Alaska Native
 demographics_set[, race_aian:= 0]
@@ -59,7 +59,7 @@ demographics_set[ (demo_race_a_p___12 == 1 | demo_race_a_p___13 == 1), race_aian
 #NHPI: Native Hawaiian and Other Pacific
 demographics_set[, race_nhpi:= 0]
 demographics_set[ demo_race_a_p___14 == 1 | demo_race_a_p___15 == 1 | demo_race_a_p___16 == 1 |
-                      demo_race_a_p___17 == 1, race_nhpi:= 1 ]
+                    demo_race_a_p___17 == 1, race_nhpi:= 1 ]
 
 # Other
 demographics_set[, race_other:= 0 ]
@@ -75,9 +75,9 @@ demographics_set[, table(race_mixed, useNA = "if")]
 demographics_set[, grep("^demo_race_a_p___",colnames(demographics_set), value = T) := NULL]
 
 
-demographics_set[,non_hispanic_black := 0]
+demographics_set[!is.na(ethnicity_hisp), non_hispanic_black := 0]
 demographics_set[ethnicity_hisp == 0 & race_black == 1, non_hispanic_black := 1]
-demographics_set[,non_hispanic_white := 0]
+demographics_set[!is.na(ethnicity_hisp) ,non_hispanic_white := 0]
 demographics_set[ethnicity_hisp == 0 & race_white == 1, non_hispanic_white := 1]
 
 
@@ -102,8 +102,8 @@ demographics_set[(demo_prnt_marital_v2 == 1), parents_married := 1]
 demographics_set[is.na(demo_prnt_marital_v2), parents_married := NA]
 
 demographics_set[,living_with_partenr_or_married := 0]
-demographics_set[(demo_prnt_marital_v2 %in% c(1,6)), living_with_partenr := 1]
-demographics_set[is.na(demo_prnt_marital_v2), living_with_partenr := NA]
+demographics_set[(demo_prnt_marital_v2 %in% c(1,6)), living_with_partenr_or_married := 1]
+demographics_set[is.na(demo_prnt_marital_v2), living_with_partenr_or_married := NA]
 
 ######## both parents immgretation
 # 1. if demo_prnt_16 == 0 ==> immgration = 0
@@ -126,17 +126,14 @@ eigen(xcor)$values[1]/eigen(xcor)$values[2]
 
 
 demographics_set[, demo_fam_poverty := {
-    fcase(
-        rowSums(is.na(.SD)) != 7,rowSums(.SD, na.rm = T) ,
-        default = NA
-    )
+  fcase(
+    rowSums(is.na(.SD)) != 7,rowSums(.SD, na.rm = T) ,
+    default = NA
+  )
 }, .SDcols = economic_hardship_names]
 
 
 # demographics_set[ , View(.SD), .SDcols = c(economic_hardship_names, "demo_fam_poverty") ]
-
-
-demographics_set = droplevels(demographics_set)
 
 
 #remove irrelevant columns
@@ -147,17 +144,13 @@ demographics_set[demo_roster_v2 %in% c(60,77), demo_roster_v2:= NA]
 
 
 
-selected_features = c("src_subject_id", "sex", "age", "gender", "eventname", "interview_age", "interview_date",
-                      "race_white", "race_black", "race_aian", "race_nhpi", "race_asian", "race_other","race_mixed" ,"ethnicity_hisp",
-                      "non_hispanic_black", "non_hispanic_white", "parents_avg_edu", "household_income",
-                      "born_in_usa", "sex_br")
+selected_features = c("src_subject_id", "sex", "sex_br", "age", "eventname", "interview_age", "interview_date",
+                      "race_white", "race_black", "race_aian", "race_nhpi", "race_asian", "race_other","race_mixed" ,
+                      "ethnicity_hisp", "non_hispanic_black", "non_hispanic_white",
+                      "separated_or_divorced","parents_married", "living_with_partenr_or_married",
+                      "parents_avg_edu", "household_income", "demo_fam_poverty",
+                      "born_in_usa", "demo_roster_v2")
 
-write.csv(file = "outputs/demographics_baseline.csv", x = demographics_set[,..selected_features], row.names=F, na = "")
-
-
-
-
-
-
+write.csv(file = "data/demographics_baseline.csv", x = demographics_set[,..selected_features], row.names=F, na = "")
 
 

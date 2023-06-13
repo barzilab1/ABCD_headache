@@ -1,36 +1,31 @@
 library(readr)
 library(dplyr)
 library(janitor)
+library(lubridate)
 source("config.R")
 
-demographics_baseline <- read_csv("outputs/demographics_baseline.csv")
-demographics_long <- read_csv("outputs/demographics_long.csv")
-medications <- read_csv("outputs/medications.csv", col_types = cols(.default = "d", src_subject_id = "c", eventname = "c",))
-physicalhealth_sum <- read_csv("outputs/physicalhealth_sum.csv")
-physicalhealth <- read_csv("outputs/physicalhealth.csv") # %>% dplyr::select(-sex)
-family_id <- read_csv("outputs/family_id.csv") %>% select(src_subject_id, rel_family_id)
-exposome_set <- read_csv("outputs/exposome_set.csv")
-exposome_sum_set <- read_csv("outputs/exposome_sum_set.csv")
-psychopathology_sum_scores <- read_csv("outputs/psychopathology_sum_scores.csv")
-site <- read_csv("outputs/site.csv")
-geo_data <- read_csv("outputs/geo_data.csv")
+demographics_all <- read_csv("data/demographics_all.csv") %>% mutate(interview_date = mdy(interview_date))
+demo_race <- read_csv("data/demo_race.csv")
+demographics <- merge(demographics_all, demo_race)
+
+medications <- read_csv("data/medications.csv", col_types = cols(.default = "d", src_subject_id = "c", eventname = "c",))
+physicalhealth_sum <- read_csv("data/physicalhealth_sum.csv") %>% mutate(interview_date = mdy(interview_date))
+physicalhealth <- read_csv("data/physicalhealth.csv") %>% mutate(interview_date = mdy(interview_date))
+family_id <- read_csv("data/family_id.csv") %>% select(src_subject_id, rel_family_id)
+exposome_set <- read_csv("data/exposome_set.csv") %>% mutate(interview_date = mdy(interview_date))
+exposome_sum_set <- read_csv("data/exposome_sum_set.csv") %>% mutate(interview_date = mdy(interview_date))
+psychopathology_sum_scores <- read_csv("data/psychopathology_sum_scores.csv") %>% mutate(interview_date = mdy(interview_date))
+site <- read_csv("data/site.csv") %>% mutate(interview_date = mdy(interview_date))
+geo_data <- read_csv("data/geo_data.csv") %>% mutate(interview_date = mdy(interview_date))
 e_factor <- read_csv(file.path(e_factor_files_path, "ABCD_Exposome_bifactor_scores_16March2021.csv")) %>%
     mutate(src_subject_id = paste0("NDAR_", ID)) %>%
     select(-ID)
 genetics <- read_csv(file.path(genetic_files_path, "genetic.csv")) %>% dplyr::select(src_subject_id, migraine_PRS, genetic_afr)
 
-# combine demographics of all time points
-demo_race = demographics_baseline[,grep("src|race|hisp", colnames(demographics_baseline))]
-
-demographics_long <- merge(demographics_long, demo_race)
-demographics_long <- demographics_long %>% filter(eventname != "baseline_year_1_arm_1")
-
-demographics = bind_rows(demographics_baseline, demographics_long)
-
 # define headaches medications
-medications = medications[,grep("src|inter|event|Migraine|Daily.Preventive|Rescue.Medications", colnames(medications))]
-medications$any_migraine_med_2w = Reduce("|",medications[,c("Migraine.Medications_2w", "Daily.Preventive.medications_2w", "Rescue.Medications_2w")])*1
-medications$any_migraine_med_1yr = Reduce("|",medications[,c("Migraine.Medications_1yr", "Daily.Preventive.medications_1yr", "Rescue.Medications_1yr")])*1
+medications = medications[, grep("src|inter|event|Migraine|Daily.Preventive|Rescue.Medications", colnames(medications))]
+medications$any_migraine_med_2w = Reduce("|", medications[,c("Migraine.Medications_2w", "Daily.Preventive.medications_2w", "Rescue.Medications_2w")])*1
+medications$any_migraine_med_1yr = Reduce("|", medications[,c("Migraine.Medications_1yr", "Daily.Preventive.medications_1yr", "Rescue.Medications_1yr")])*1
 
 # Merge data
 dataset = merge(demographics, medications, all.x = T)
@@ -57,7 +52,6 @@ dataset <- dataset %>%
     mutate(migraine_PRS_EUR = case_when(genetic_afr == 0 ~ migraine_PRS, TRUE ~ NA_real_))
 
 # Create binary variables
-## 1_Household income if<$25k; then code as 1 --- if>$25k; then code as 0
 ## 2_Number of nocked unconscious: if >0: then code as 1 --- if =0: then code as 0
 ## 3_Number of head injuries: if >0: then code as 1 --- if =0: then code as 0
 ## 4_ worst injury overall: if >1: then code as 1 --- if =1: then code as 0
@@ -69,7 +63,6 @@ dataset <- dataset %>%
 ## 9-neighborhood2r_p
 dataset <- dataset %>%
     mutate(
-        fam_under_poverty_line = case_when(household_income <= 4 ~ 1, household_income >= 6 ~ 0, TRUE ~ NA_real_), # group 5: 1/2 above, 1/2 below poverty line --> NA
         knocked_unconscious = case_when(medhx_ss_6j_times_p_l > 0 ~ 1, TRUE ~ as.numeric(medhx_ss_6j_times_p_l)),
         head_injuries = case_when(medhx_ss_6i_times_p_l > 0 ~ 1, TRUE ~ as.numeric(medhx_ss_6i_times_p_l)),
         tbi_worst_overall = case_when(tbi_ss_worst_overall_l == 1 ~ 0, tbi_ss_worst_overall_l > 1 ~ 1, TRUE ~ as.numeric(tbi_ss_worst_overall_l)),
@@ -91,7 +84,7 @@ dataset <- dataset %>% remove_empty(c("rows","cols")) %>%
            # Only use data at baseline, 1-year and 2-year
            eventname != "3_year_follow_up_y_arm_1")
 
-write.csv(file = "outputs/dataset_long.csv", x = dataset, row.names = F, na = "")
+write.csv(file = "data/dataset_long.csv", x = dataset, row.names = F, na = "")
 
 
 

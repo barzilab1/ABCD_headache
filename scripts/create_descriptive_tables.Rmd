@@ -13,13 +13,15 @@ knitr::opts_chunk$set(echo = TRUE)
 library(dplyr)
 library(tableone)
 library(sjPlot)
+library(tidyr)
+library(janitor)
 
 source("../utility_fun.R")
 ```
 
 ```{r}
-data_wide <- read.csv("../outputs/dataset_wide.csv")
-data_long <- read.csv("../outputs/dataset_long.csv")
+data_wide <- read.csv("../data/dataset_wide.csv")
+data_long <- read.csv("../data/dataset_long.csv")
 ```
 
 ```{r}
@@ -33,6 +35,34 @@ prop.table(table(data_wide$sex_br))
 ## % of headache
 table(data_wide$headache_ever) # 907
 907/N
+
+## Discovery sample
+abcd_gr1 <- read_rds("../outputs/abcd_gr1.rds")
+abcd_gr1_wide <-
+    abcd_gr1 %>% select(matches("src|eventname|medhx_2q_l")) %>% 
+    pivot_wider(., names_from = eventname, values_from = medhx_2q_l) %>%
+    remove_empty(., which = c("rows", "cols"), quiet = TRUE)
+
+abcd_gr1_wide$headache_ever <- apply(abcd_gr1_wide[, grepl("year", colnames(abcd_gr1_wide))], 1, function(x) {any(x == 1)*1})
+### Numbers for abstract
+# discovery subsample (n=XX, YY headache) (5784, 426 (13.39%))
+length(unique(abcd_gr1$src_subject_id))
+table(abcd_gr1_wide$headache_ever)
+prop.table(table(abcd_gr1_wide$headache_ever))
+
+
+abcd_gr2 <- read_rds("../outputs/abcd_gr2.rds")
+abcd_gr2_wide <-
+    abcd_gr2 %>% select(matches("src|eventname|medhx_2q_l")) %>% 
+    pivot_wider(., names_from = eventname, values_from = medhx_2q_l) %>%
+    remove_empty(., which = c("rows", "cols"), quiet = TRUE)
+
+abcd_gr2_wide$headache_ever <- apply(abcd_gr2_wide[, grepl("year", colnames(abcd_gr2_wide))], 1, function(x) {any(x == 1)*1})
+### Numbers for abstract
+# testing subsample (n=XX, YY headache) (5784, 459 (14.69%))
+length(unique(abcd_gr2$src_subject_id))
+table(abcd_gr2_wide$headache_ever)
+prop.table(table(abcd_gr2_wide$headache_ever))
 ```
 
 ```{r}
@@ -73,27 +103,27 @@ table1_adj_p <-
 
 ```{r}
 # Table 2: internal validation headache and medication/PRS
-mod_headache_med1 <- glmer(data = data_long, 
-                           medhx_2q_l~Migraine.Medications_2w + scale(age_years) + scale(age_years)^2 + scale(age_years)^3 + 
-                               sex_br + race_black + race_white + household_income + ethnicity_hisp +
-                               (1 | site_id_l_br/rel_family_id/src_subject_id), family = binomial, nAGQ = 0)
+# mod_headache_med1 <- glmer(data = data_long, 
+#                            medhx_2q_l ~ Migraine.Medications_2w + scale(age_years) + scale(age_years)^2 + scale(age_years)^3 + 
+#                                sex_br + race_black + race_white + household_income + ethnicity_hisp +
+#                                (1 | site_id_l_br/rel_family_id/src_subject_id), family = binomial, nAGQ = 0)
 
 mod_headache_med2 <- glmer(data = data_long, 
-                           medhx_2q_l~Daily.Preventive.medications_2w + scale(age_years) + scale(age_years)^2 + scale(age_years)^3  + 
+                           medhx_2q_l ~ Daily.Preventive.medications_2w + scale(age_years) + scale(age_years)^2 + scale(age_years)^3  + 
                                sex_br + race_black + race_white + household_income + ethnicity_hisp +
                                (1 | site_id_l_br/rel_family_id/src_subject_id), family = binomial, nAGQ = 0)
 
 mod_headache_med3 <- glmer(data = data_long, 
-                           medhx_2q_l~Migraine.Rescue.medications_2w + scale(age_years) + scale(age_years)^2 + scale(age_years)^3  + 
+                           medhx_2q_l ~ Migraine.Rescue.medications_2w + scale(age_years) + scale(age_years)^2 + scale(age_years)^3  + 
                                sex_br + race_black + race_white + household_income + ethnicity_hisp +
                                (1 | site_id_l_br/rel_family_id/src_subject_id), family = binomial, nAGQ = 0)
 
 mod_headache_prs <- glmer(data = data_long, 
-                          medhx_2q_l~migraine_PRS_EUR + scale(age_years) + scale(age_years)^2 + scale(age_years)^3  + 
+                          medhx_2q_l ~ migraine_PRS_EUR + scale(age_years) + scale(age_years)^2 + scale(age_years)^3  + 
                               sex_br + race_black + race_white + household_income + ethnicity_hisp +
                               (1 | site_id_l_br/rel_family_id/src_subject_id), family = binomial, nAGQ = 0)
 
-tab_model(mod_headache_med1, mod_headache_med2, mod_headache_med3, mod_headache_prs, show.intercept = F)
+tab_model(mod_headache_med2, mod_headache_med3, mod_headache_prs, show.intercept = F)
 ```
 
 ```{r}
@@ -139,22 +169,22 @@ write.csv(
 
 # FDR-adjusted p-values
 etable2_adj_p <- 
-    round(p.adjust(c(.74941, 0.00001, 0.00001, 0.36594, 0.61156, 0.71581, 0.00001, 0.81857, 0.00001, 0.91797, 0.81678, 0.00001, 0.00001, 0.00001, 0.00004), method = "fdr"), 3)
+    round(p.adjust(c(.74941, 0.00001, 0.00001, 0.36594, 0.61156, 0.71581, 0.00001, 0.81857, 0.00001, 0.91797, 0.81678, 0.00001, 0.00001, 0.00402), method = "fdr"), 3)
 ```
 
 
 
 ```{r}
 # etable 3: internal validation # by headache
-table2_var <- c("daily_med_2w_ever", "migraine_rescue_med_2w_ever") #, "migraine_PRS_EUR"
+etable3_var <- c("daily_med_2w_ever", "migraine_rescue_med_2w_ever") #, "migraine_PRS_EUR"
 
 write.csv(
     print(
         CreateTableOne(
             data = data_wide,
-            vars = table2_var,
+            vars = etable3_var,
             strata = "headache_ever",
-            factorVars = table2_var,
+            factorVars = etable3_var,
             includeNA = T,
             addOverall = T
         ),
@@ -163,7 +193,7 @@ write.csv(
         catDigits = 2,
         contDigits = 2
     ),
-    "../outputs/table2_main_values_120722.csv"
+    "../outputs/etable3_main_values_120722.csv"
 )
 
 table2_adj_p <- round(p.adjust(c(0.00001, 0.00001), method = "fdr"), 3)

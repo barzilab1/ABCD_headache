@@ -74,8 +74,8 @@ exposome_set = merge(exposome_set, yle01, all.x = T)
 exposome_set = merge(exposome_set, cb, all.x = T)
 exposome_set = merge(exposome_set, dhx01, all.x = T)
 
-write.csv(file = "outputs/family_id.csv",x = acspsw03, row.names=F, na = "")
-write.csv(file = "outputs/exposome_set.csv",x = exposome_set, row.names=F, na = "")
+write.csv(file = "data/family_id.csv",x = acspsw03, row.names=F, na = "")
+write.csv(file = "data/exposome_set.csv",x = exposome_set, row.names=F, na = "")
 
 
 

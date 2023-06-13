@@ -35,7 +35,7 @@ physicalhealth_sum = bind_rows(medhxss01, lssmh01)
 tbi = bind_rows(tbi01, lsstbi01)
 physicalhealth_sum = merge(physicalhealth_sum, tbi)
 
-write.csv(file = "outputs/physicalhealth_sum.csv", x = physicalhealth_sum, row.names = F, na = "")
+write.csv(file = "data/physicalhealth_sum.csv", x = physicalhealth_sum, row.names = F, na = "")
 
 
 

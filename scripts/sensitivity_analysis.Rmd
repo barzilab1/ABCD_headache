@@ -72,12 +72,13 @@ r2(mod5.1)[2]
 
 anova(mod1.1, mod2.1, test="Chisq")
 anova(mod1.1, mod3.1, test="Chisq")
+anova(mod2.1, mod3.1, test="Chisq")
 anova(mod2.1, mod4.1, test="Chisq")
 anova(mod3.1, mod4.1, test="Chisq") 
 anova(mod4.1, mod5.1, test="Chisq") 
 
 # adj p
-round(p.adjust(c(4.87e-08, 0.0005374, 0.0009536, 8.44e-08, 0.1282), method = "fdr"), 3)
+round(p.adjust(c(2.454e-10, 0.0005176, 0, 0.0009485, 4.367e-10, 0.08924), method = "fdr"), 3)
 ```
 
 # Sensitivity analysis 2: P-threshold = 0.05
@@ -150,12 +151,13 @@ r2(mod5.2)[2]
 
 anova(mod1.2, mod2.2, test="Chisq")
 anova(mod1.2, mod3.2, test="Chisq")
+anova(mod2.2, mod3.2, test="Chisq")
 anova(mod2.2, mod4.2, test="Chisq")
 anova(mod3.2, mod4.2, test="Chisq") 
 anova(mod4.2, mod5.2, test="Chisq") 
 
 # adj p
-round(p.adjust(c(1.085e-09, 0.0005374, 0.0008845, 1.745e-09, 0.1643), method = "fdr"), 3) 
+round(p.adjust(c(2.327e-11, 0.0005176, 0, 0.0008879, 3.885e-11, 0.1307), method = "fdr"), 3) 
 ```
 
 

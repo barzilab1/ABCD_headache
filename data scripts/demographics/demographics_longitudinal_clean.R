@@ -46,8 +46,8 @@ demographics_set[(demo_prnt_marital_v2_l == 1), parents_married := 1]
 demographics_set[is.na(demo_prnt_marital_v2_l), parents_married := NA]
 
 demographics_set[,living_with_partenr_or_married := 0]
-demographics_set[(demo_prnt_marital_v2_l %in% c(1,6)), living_with_partenr := 1]
-demographics_set[is.na(demo_prnt_marital_v2_l), living_with_partenr := NA]
+demographics_set[(demo_prnt_marital_v2_l %in% c(1,6)), living_with_partenr_or_married := 1]
+demographics_set[is.na(demo_prnt_marital_v2_l), living_with_partenr_or_married := NA]
 
 
 ########### economic hardship
@@ -60,10 +60,10 @@ VSS.scree(xcor)
 eigen(xcor)$values[1]/eigen(xcor)$values[2]
 
 demographics_set[, demo_fam_poverty := {
-    fcase(
-        rowSums(is.na(.SD)) != 7,rowSums(.SD, na.rm = T) ,
-        default = NA
-    )
+  fcase(
+    rowSums(is.na(.SD)) != 7,rowSums(.SD, na.rm = T) ,
+    default = NA
+  )
 }, .SDcols = economic_hardship_names]
 
 
@@ -71,17 +71,11 @@ demographics_set[, demo_fam_poverty := {
 
 
 
-demographics_set = droplevels(demographics_set)
+selected_features = c("src_subject_id", "sex", "sex_br", "age", "eventname" ,"interview_date", "interview_age" ,
+                      "separated_or_divorced", "parents_married", "living_with_partenr_or_married",
+                      "parents_avg_edu", "household_income", "demo_fam_poverty", "demo_roster_v2_l")
 
-
-selected_features = c("src_subject_id", "interview_date", "interview_age", "demo_prim_l" , "eventname", "sex",
-                      "household_income","demo_prnt_ed_v2_l", "demo_prtnr_ed_v2_l", "parents_avg_edu",
-                      "demo_prnt_marital_v2_l", "separated_or_divorced", "parents_married", "living_with_partenr_or_married",
-                      "age", "sex_br", "gender", "demo_ed_v2_l",
-                      economic_hardship_names, "demo_fam_poverty")
-
-write.csv(file = "outputs/demographics_long.csv", x = demographics_set[,..selected_features], row.names=F, na = "")
-
+write.csv(file = "data/demographics_long.csv", x = demographics_set[,..selected_features], row.names=F, na = "")
 
 
 

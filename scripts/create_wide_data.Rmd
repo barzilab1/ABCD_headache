@@ -22,7 +22,7 @@ source("../utility_fun.R")
 # Choose variables needed for table 1
 # headache never 0s at all timepoints - compare demo, med, PRS, domains of exposomes
 # Compare included and not included demo variables in supp (not age) sex race edu income
-data_long <- read.csv("../outputs/dataset_long.csv")
+data_long <- read.csv("../data/dataset_long.csv")
 data_long <- data_long %>% 
     dplyr::select(matches(c("src", "eventn", "age_years", "sex_br", "race", "eth", "edu", "household_in", 
                      "medhx_[26][qij]", "[mM]edications_2", "site", "_PRS", "genetic_afr"))) %>% 
@@ -57,9 +57,9 @@ data_wide$head_injury_ever <- apply(data_wide[, grepl("medhx_6i", colnames(data_
 data_wide$knocked_unconsc_ever <- apply(data_wide[, grepl("medhx_6j", colnames(data_wide))], 1, function(x) {any(x == 1)*1}) # knocked unconscious
 
 data_wide$age_years_mean <- rowMeans(data_wide[, which(grepl("age_years", colnames(data_wide)))], na.rm = T)
-data_wide$dhea_mean <- rowMeans(data_wide[, which(grepl("dhea", colnames(data_wide)))], na.rm = T)
-data_wide$hse_mean <- rowMeans(data_wide[, which(grepl("hse", colnames(data_wide)))], na.rm = T)
-data_wide$ert_mean <- rowMeans(data_wide[, which(grepl("ert", colnames(data_wide)))], na.rm = T)
+# data_wide$dhea_mean <- rowMeans(data_wide[, which(grepl("dhea", colnames(data_wide)))], na.rm = T)
+# data_wide$hse_mean <- rowMeans(data_wide[, which(grepl("hse", colnames(data_wide)))], na.rm = T)
+# data_wide$ert_mean <- rowMeans(data_wide[, which(grepl("ert", colnames(data_wide)))], na.rm = T)
 
 data_wide <- create_ever_var(data = data_wide, search_term = "Migraine.Medications_2w__", new_col_name = "migraine_med_2w_ever")
 data_wide <- create_ever_var(data = data_wide, search_term = "Daily.Preventive.medications_2w__", new_col_name = "daily_med_2w_ever")
@@ -68,13 +68,14 @@ data_wide <- create_ever_var(data = data_wide, search_term = "Migraine.Rescue.me
 ```
 
 ```{r}
+# Add a new column name for ease
 data_wide <- data_wide %>% 
     mutate(migraine_PRS_EUR = case_when(genetic_afr == 0 ~ migraine_PRS,
                                         TRUE ~ NA_real_))
 ```
 
 ```{r}
-write.csv(data_wide, "../outputs/dataset_wide.csv")
+write.csv(data_wide, "../data/dataset_wide.csv")
 ```
 
 

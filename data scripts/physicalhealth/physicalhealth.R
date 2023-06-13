@@ -22,6 +22,4 @@ physicalhealth = bind_rows(mx01, lpmh01)
 physicalhealth = merge(physicalhealth, otbi01, all.x = T)
 
 
-write.csv(file = "outputs/physicalhealth.csv",x = physicalhealth, row.names = F, na = "")
-
-
+write.csv(file = "data/physicalhealth.csv",x = physicalhealth, row.names = F, na = "")

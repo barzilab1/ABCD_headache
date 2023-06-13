@@ -22,7 +22,7 @@ sscep = sscep[, !grepl("_(nm|nt|na|answered)$", colnames(sscep))]
 ########### merge all tables
 exposome_sum_set = merge(sscey01, sscep)
 
-write.csv(file = "outputs/exposome_sum_set.csv",x = exposome_sum_set, row.names = F, na = "")
+write.csv(file = "data/exposome_sum_set.csv",x = exposome_sum_set, row.names = F, na = "")
 
 
 

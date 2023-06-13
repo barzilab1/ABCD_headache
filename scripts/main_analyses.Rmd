@@ -18,13 +18,14 @@ library(janitor)
 library(dplyr)
 library(purrr)
 source("../utility_fun.R")
+source("../config.R")
 ```
 
 # Read data
 ```{r}
-data_long <- read.csv("../outputs/dataset_long.csv")
+data_long <- read.csv("../data/dataset_long.csv")
 
-matched_data <- read.table(file = '../data/participants.tsv', header = TRUE)
+matched_data <- read.table(file = file.path(abcd_partition_path, "participants.tsv"), header = TRUE)
 matched_data <- matched_data %>% 
     mutate(participant_id = str_replace_all(participant_id, "sub-", ""),
            participant_id = str_replace_all(participant_id, "NDAR", "NDAR_"))
@@ -33,8 +34,8 @@ matched_data <- matched_data %>%
 # Create discovery and testing subsets
 ```{r}
 # Get IDs of participants in group 1
-id_gr1 <- matched_data %>% filter(matched_group == 1) %>% select(participant_id) %>% pull()
-id_gr2 <- matched_data %>% filter(matched_group == 2) %>% select(participant_id) %>% pull()
+id_gr1 <- matched_data %>% filter(matched_group == 1) %>% pull(participant_id)
+id_gr2 <- matched_data %>% filter(matched_group == 2) %>% pull(participant_id)
 
 # Create ABCD dataset 1 & 2
 abcd_gr1 <- data_long %>% filter(src_subject_id %in% id_gr1)
@@ -63,17 +64,20 @@ saveRDS(vars, "../outputs/vars_98.rds")
 # output_plot <- data.frame("variable" = NA, "coef" = NA, "p_value" = NA, "std.error" = NA, "low_ci" = NA, "high_ci" = NA)
 # univariate_plot <- sig_vars %>%
 #     map_dfr(~get_est(outcome = "medhx_2q_l", predictor = .x, variables = var_headache_0, data = abcd_gr1, estimate = "coef", output = output_plot, conf_int = 0.9))
-# saveRDS(univariate_plot, file = "../outputs/univariate_plot_abcdgr1_coef_120922.rds")
+# saveRDS(univariate_plot, file = "../data/univariate_plot_abcdgr1_coef_120922.rds")
 ```
 
 ```{r}
-# test new function # work - use new function for exwas - Not FDR corrected p-values for headache
-# Exwas 1 on original variables - get significant variables
+# Exwas 1 on original variables - get significant variables - Not FDR corrected p-values for headache project - No covariates
 exwas_headache <- exwas(data_train = abcd_gr1, vars = vars, outcome = "medhx_2q_l", data_test = abcd_gr2)
 univariate_headache <- exwas_headache$univariate_models_dat
 
 # eTable4
-univariate_headache_sig <- exwas_headache$univariate_models_sig
+univariate_headache_sig <- exwas_headache$univariate_models_sig %>% 
+    mutate(low_ci = round(exp(low_ci), 2), high_ci = round(exp(high_ci), 2), 
+           CI_95 = paste0(low_ci, " - ", high_ci), p_value = round(p_value, 3)) %>% 
+    select(variable, OR, CI_95, p_value)
+write.csv(univariate_headache_sig, "../outputs/univariate_headache_sig_061323.csv")
 
 sig_vars <- univariate_headache_sig %>% pull(variable)
 
@@ -82,8 +86,7 @@ saveRDS(univariate_headache, file = "../outputs/univariate_plot_abcdgr1_coef_051
 
 # Generate exposome score
 ```{r}
-# Get weight from abcd_gr1 # but use binary variables only
-# Replace continuous variables in sig_vars by binary variables
+# Get weight from abcd_gr1 # but use binary variables of Likert variables only
 # Exwas 2 on updated variables (with binary variables) - get coefficients
 sig_vars_bin <- sig_vars
 # Dichotomize 2 Likert variables
@@ -106,7 +109,7 @@ abcd_gr2_weight <- exwas_headache_binary$data_test_exposome
 #                                        sweep(abcd_gr2 %>% select(all_of(univariate_testing %>% arrange(coef) %>% select(variable) %>% pull())), 2, weight, `*`), 
 #                                        na.rm = T))
 
-# saveRDS(abcd_gr2_weight, file = "../outputs/abcd_gr2_weight.rds")
+# saveRDS(abcd_gr2_weight, file = "../data/abcd_gr2_weight.rds")
 ```
 
 # Multivariate models in the main result
@@ -143,23 +146,24 @@ r2(mod5)[2]
 
 anova(mod1, mod2, test="Chisq")
 anova(mod1, mod3, test="Chisq")
+anova(mod2, mod3, test="Chisq")
 anova(mod2, mod4, test="Chisq")
 anova(mod3, mod4, test="Chisq") 
 anova(mod4, mod5, test="Chisq") 
 
 # adj p
-round(p.adjust(c(5.041e-10, 0.0005374, 0.0009378, 8.566e-10, 0.1062), method = "fdr"), 3)
+round(p.adjust(c(1.279e-11, 0.0005176, 0, 0.0009439, 2.262e-11, 0.08518), method = "fdr"), 3)
 ```
 
 # Supplement - models on whole cohort
 ```{r}
 # eTable 5
 mod21 <- glmer(medhx_2q_l ~ (1 | site_id_l_br/rel_family_id/src_subject_id) + age_years + age_years^2 + age_years^3 + 
-                   sex_br + race_black + race_white + household_income + ethnicity_hisp,
+                   sex_br + race_black + race_white + ethnicity_hisp,
               nAGQ = 0, family = binomial, data = abcd_gr2_weight) # all population
 
 mod22 <- glmer(medhx_2q_l ~ weighted_exposome + (1 | site_id_l_br/rel_family_id/src_subject_id) + age_years + age_years^2 + age_years^3 + 
-                   sex_br + race_black + race_white + household_income + ethnicity_hisp, 
+                   sex_br + race_black + race_white + ethnicity_hisp, 
               nAGQ = 0, family = binomial, data = abcd_gr2_weight) # all population
 
 com2 <- tab_model(mod21, mod22)

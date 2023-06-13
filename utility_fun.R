@@ -152,9 +152,8 @@ exwas <- function(data_train, vars, outcome, data_test = data_test_scale, binary
     # Run all univariate models
     univariate_models <- vars %>%
         map_dfr(~get_est(outcome = outcome, predictor = .x,
-                         var_added = NULL, #c("interview_age", "sex_br", "race_black", "race_white", "ethnicity_hisp"), no covariates for headache project
+                         var_added = NULL, #no covariates for headache project
                          data = data_train,  binary_DV = binary_DV, conf_int = conf_int)) %>%
-        # mutate(p_fdr = p.adjust(p_value, method = "fdr")) %>%
         mutate(significant_p0.1 = case_when(p_value <= p_cutoff ~ 1, TRUE ~ NA_real_)) # for Headache project, p-value cut-off is 0.1, and use p-values, not adjusted
 
     # Extract significant variables

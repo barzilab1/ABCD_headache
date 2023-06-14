@@ -38,4 +38,4 @@
 5. Run the [main_analyses.Rmd](scripts/main_analyses.Rmd) to generate main results.
 6. Run the [create_forest_plot.Rmd](scripts/create_forest_plot.Rmd) to generate the forest plot (figure 2).
 7. Run the [sensitivity_analysis.Rmd](scripts/sensitivity_analysis.Rmd) to generate eTable 7 and 8.
-8. Run the [create_correlation_matrix.Rmd](create_correlation_matrix.Rmd) to generate correlation matrices at each timepoint.
+8. Run the [create_correlation_matrix.Rmd](scripts/create_correlation_matrix.Rmd) to generate correlation matrices at each timepoint.

@@ -172,3 +172,13 @@ exwas <- function(data_train, vars, outcome, data_test = data_test_scale, binary
 
     return(list(univariate_models_dat = univariate_models, univariate_models_sig = univariate_models_sig, data_test_exposome = data_test))
 }
+
+
+# plot_cor <- function(vars) {
+#     cor = cor_auto(vars)
+#     testRes = cor.mtest(vars, conf.level = 0.95)
+#     return(corrplot(cor, p.mat = testRes$p, method = 'color', diag = FALSE, type = 'upper',
+#                      sig.level = c(0.001, 0.01, 0.05), pch.cex = 0.4,
+#                      insig = 'label_sig', pch.col = 'grey20', order = 'original', tl.col = "black", tl.srt = 45, tl.cex = 0.4, cl.cex = 0.8, cl.ratio = 0.2))
+#     # return(plot)
+# }

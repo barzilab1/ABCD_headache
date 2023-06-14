@@ -1,0 +1,58 @@
+---
+title: "create correlation matrix at each timepoint"
+author: "Kate Tran"
+date: "2023-06-13"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(dplyr)
+library(janitor)
+source("../utility_fun.R")
+```
+
+```{r}
+data_long <- read.csv("../data/dataset_long.csv")
+vars <- readRDS("../outputs/vars_98.rds")
+```
+
+```{r}
+png("../plots/correlation_bl_98vars.png", units="in", width = 10, height = 10, res = 620)
+cor_vars_bl <- data_long %>% filter(eventname == "baseline_year_1_arm_1") %>% select(all_of(vars)) %>% remove_empty(., c("cols", "rows"))
+
+cor_bl = cor_auto(cor_vars_bl)
+testRes_bl = cor.mtest(cor_bl, conf.level = 0.95)
+
+corrplot(cor_bl, p.mat = testRes_bl$p, method = 'color', diag = FALSE, type = 'upper',
+         sig.level = c(0.001, 0.01, 0.05), pch.cex = 0.6,
+         insig = 'label_sig', pch.col = 'grey20', order = 'original', tl.col = "black", tl.srt = 45, tl.cex = 0.6, cl.cex = 0.6, cl.ratio = 0.2)
+```
+
+```{r}
+png("../plots/correlation_1y_98vars.png", units="in", width = 15, height = 15, res = 620)
+cor_vars_1y <- data_long %>% filter(eventname == "1_year_follow_up_y_arm_1") %>% select(all_of(vars)) %>% remove_empty(., c("cols", "rows"))
+
+cor_1y = cor_auto(cor_vars_1y)
+testRes_1y = cor.mtest(cor_1y, conf.level = 0.95)
+
+corrplot(cor_1y, p.mat = testRes_1y$p, method = 'color', diag = FALSE, type = 'upper',
+         sig.level = c(0.001, 0.01, 0.05), pch.cex = 0.4,
+         insig = 'label_sig', pch.col = 'grey20', order = 'original', tl.col = "black", tl.srt = 45, tl.cex = 0.4, cl.cex = 0.8, cl.ratio = 0.2)
+```
+
+```{r}
+png("../plots/correlation_2y_98vars.png", units="in", width = 10, height = 10, res = 620)
+cor_vars_2y <- data_long %>% filter(eventname == "2_year_follow_up_y_arm_1") %>% select(all_of(vars)) %>% remove_empty(., c("cols", "rows")) 
+
+cor_2y = cor_auto(cor_vars_2y)
+testRes_2y = cor.mtest(cor_2y, conf.level = 0.95)
+
+corrplot(cor_2y, p.mat = testRes_2y$p, method = 'color', diag = FALSE, type = 'upper',
+         sig.level = c(0.001, 0.01, 0.05), pch.cex = 0.4,
+         insig = 'label_sig', pch.col = 'grey20', order = 'original', tl.col = "black", tl.srt = 45, tl.cex = 0.4, cl.cex = 0.8, cl.ratio = 0.2)
+```
+

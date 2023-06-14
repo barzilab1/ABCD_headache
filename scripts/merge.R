@@ -20,7 +20,7 @@ geo_data <- read_csv("data/geo_data.csv") %>% mutate(interview_date = mdy(interv
 e_factor <- read_csv(file.path(e_factor_files_path, "ABCD_Exposome_bifactor_scores_16March2021.csv")) %>%
     mutate(src_subject_id = paste0("NDAR_", ID)) %>%
     select(-ID)
-genetics <- read_csv(file.path(genetic_files_path, "genetic.csv")) %>% dplyr::select(src_subject_id, migraine_PRS, genetic_afr)
+genetics <- read_csv(file.path(abcd_genetics_path, "genetic.csv")) %>% dplyr::select(src_subject_id, migraine_PRS, genetic_afr)
 
 # define headaches medications
 medications = medications[, grep("src|inter|event|Migraine|Daily.Preventive|Rescue.Medications", colnames(medications))]

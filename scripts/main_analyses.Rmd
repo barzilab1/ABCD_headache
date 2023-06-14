@@ -56,16 +56,6 @@ saveRDS(vars, "../outputs/vars_98.rds")
 ```
 
 # Create data for forest plot
-```{r}
-# Choose significant elements
-# sig_vars <- univariate_headache_1toall %>% filter(significant == "sig") %>% select(variable) %>% pull()
-
-# Forest plot
-# output_plot <- data.frame("variable" = NA, "coef" = NA, "p_value" = NA, "std.error" = NA, "low_ci" = NA, "high_ci" = NA)
-# univariate_plot <- sig_vars %>%
-#     map_dfr(~get_est(outcome = "medhx_2q_l", predictor = .x, variables = var_headache_0, data = abcd_gr1, estimate = "coef", output = output_plot, conf_int = 0.9))
-# saveRDS(univariate_plot, file = "../data/univariate_plot_abcdgr1_coef_120922.rds")
-```
 
 ```{r}
 # Exwas 1 on original variables - get significant variables - Not FDR corrected p-values for headache project - No covariates
@@ -97,42 +87,29 @@ sig_vars_bin[sig_vars_bin == "neighborhood3r_p"] <- NULL
 
 exwas_headache_binary <- exwas(data_train = abcd_gr1, vars = sig_vars_bin, outcome = "medhx_2q_l", data_test = abcd_gr2)
 abcd_gr2_weight <- exwas_headache_binary$data_test_exposome
-
-# Get coefficients (weight) for all variables including new dichotomized variables
-# univariate_testing <- sig_vars_bin %>%  
-    # map_dfr(~get_est(outcome = "medhx_2q_l", predictor = .x, variables = var_headache_0, data = abcd_gr1, estimate = "coef", output = output_testing, conf_int = 0.9))
-
-# weight <- univariate_testing %>% arrange(coef) %>% select(coef) %>% pull()
-# Make sure columns in abcd_gr2 same order as in weight
-# abcd_gr2_weight <- transform(abcd_gr2, weighted_exposome = 
-#                                    rowSums(
-#                                        sweep(abcd_gr2 %>% select(all_of(univariate_testing %>% arrange(coef) %>% select(variable) %>% pull())), 2, weight, `*`), 
-#                                        na.rm = T))
-
-# saveRDS(abcd_gr2_weight, file = "../data/abcd_gr2_weight.rds")
 ```
 
 # Multivariate models in the main result
 ```{r}
 # Table 3
 mod1 <- glmer(medhx_2q_l ~ (1 | site_id_l_br/rel_family_id/src_subject_id) + 
-                   age_years + age_years^2 + age_years^3 + sex_br, # + household_income
-              nAGQ = 0, family = binomial, data = abcd_gr2_weight %>% filter(genetic_afr == 0)) # EUR ancestry
+                   age_years + age_years^2 + age_years^3 + sex_br + race_black + ethnicity_hisp,
+              nAGQ = 0, family = binomial, data = abcd_gr2_weight %>% filter(genetic_afr == 0))
 
 mod2 <- glmer(medhx_2q_l ~ scale(weighted_exposome) + (1 | site_id_l_br/rel_family_id/src_subject_id) + 
-                   age_years + age_years^2 + age_years^3 + sex_br, 
-              nAGQ = 0, family = binomial, data = abcd_gr2_weight %>% filter(genetic_afr == 0)) # EUR ancestry
+                   age_years + age_years^2 + age_years^3 + sex_br + race_black + ethnicity_hisp, 
+              nAGQ = 0, family = binomial, data = abcd_gr2_weight %>% filter(genetic_afr == 0))
 
 mod3 <- glmer(medhx_2q_l ~ migraine_PRS_EUR + (1 | site_id_l_br/rel_family_id/src_subject_id) + 
-                   age_years + age_years^2 + age_years^3 + sex_br, 
+                   age_years + age_years^2 + age_years^3 + sex_br + race_black + ethnicity_hisp, 
               nAGQ = 0, family = binomial, data = abcd_gr2_weight %>% filter(genetic_afr == 0))
 
 mod4 <- glmer(medhx_2q_l ~ scale(weighted_exposome) + migraine_PRS_EUR + (1 | site_id_l_br/rel_family_id/src_subject_id) + 
-                   age_years + age_years^2 + age_years^3 + sex_br, 
+                   age_years + age_years^2 + age_years^3 + sex_br + race_black + ethnicity_hisp, 
               nAGQ = 0, family = binomial, data = abcd_gr2_weight %>% filter(genetic_afr == 0))
 
 mod5 <- glmer(medhx_2q_l ~ scale(weighted_exposome) * migraine_PRS_EUR + (1 | site_id_l_br/rel_family_id/src_subject_id) + 
-                   age_years + age_years^2 + age_years^3 + sex_br, 
+                   age_years + age_years^2 + age_years^3 + sex_br + race_black + ethnicity_hisp, 
               nAGQ = 0, family = binomial, data = abcd_gr2_weight %>% filter(genetic_afr == 0))
 
 com1 <- tab_model(mod1, mod2, mod3, mod4, mod5)

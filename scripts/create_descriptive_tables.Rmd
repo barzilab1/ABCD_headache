@@ -15,7 +15,7 @@ library(tableone)
 library(sjPlot)
 library(tidyr)
 library(janitor)
-
+library(purrr)
 source("../utility_fun.R")
 ```
 
@@ -44,25 +44,47 @@ abcd_gr1_wide <-
     remove_empty(., which = c("rows", "cols"), quiet = TRUE)
 
 abcd_gr1_wide$headache_ever <- apply(abcd_gr1_wide[, grepl("year", colnames(abcd_gr1_wide))], 1, function(x) {any(x == 1)*1})
-### Numbers for abstract
-# discovery subsample (n=XX, YY headache) (5784, 426 (13.39%))
+
+## discovery subsample (n=XX, YY headache) (5784, 426 (13.39%))
 length(unique(abcd_gr1$src_subject_id))
 table(abcd_gr1_wide$headache_ever)
 prop.table(table(abcd_gr1_wide$headache_ever))
 
-
+## Testing sample
 abcd_gr2 <- read_rds("../outputs/abcd_gr2.rds")
 abcd_gr2_wide <-
-    abcd_gr2 %>% select(matches("src|eventname|medhx_2q_l")) %>% 
+    abcd_gr2 %>% select(matches("src|eventname|medhx_2q_l|migraine_PRS_EUR")) %>% 
     pivot_wider(., names_from = eventname, values_from = medhx_2q_l) %>%
     remove_empty(., which = c("rows", "cols"), quiet = TRUE)
 
 abcd_gr2_wide$headache_ever <- apply(abcd_gr2_wide[, grepl("year", colnames(abcd_gr2_wide))], 1, function(x) {any(x == 1)*1})
-### Numbers for abstract
-# testing subsample (n=XX, YY headache) (5784, 459 (14.69%))
+## testing subsample (n=XX, YY headache) (5784, 459 (14.69%))
 length(unique(abcd_gr2$src_subject_id))
 table(abcd_gr2_wide$headache_ever)
 prop.table(table(abcd_gr2_wide$headache_ever))
+
+# Number of subjects EUR
+length(unique(abcd_gr2$src_subject_id[!is.na(abcd_gr2$migraine_PRS_EUR)])) #2831
+# table(!is.na(abcd_gr2_wide$migraine_PRS_EUR)) #2831
+
+## % headache among EUR
+abcd_gr2_wide %>% filter(!is.na(migraine_PRS_EUR)) %>% select(headache_ever) %>% table() #226 (226/2831 = 7.98%)
+table(abcd_gr2_wide$headache_ever[!is.na(abcd_gr2_wide$migraine_PRS_EUR)])
+
+# Table shows the number of headache at each timepoint
+CreateTableOne(
+            data = data_long,
+            vars = "medhx_2q_l",
+            strata = "eventname",
+            factorVars = "medhx_2q_l",
+            includeNA = T)
+
+
+# Number of variables (continuous, binary, Likert) among 98
+vars <- readRDS("../outputs/vars_98.rds")
+# binary 70
+data_long %>%  select(all_of(vars)) %>%  map_df(~range(., na.rm = T)) %>% select_if(~ max(., na.rm = T) - min(., na.rm = T) == 1) %>% names() %>% length()
+# data_long %>%  select(all_of(vars)) %>%  map_df(~range(., na.rm = T)) %>% View()
 ```
 
 ```{r}
@@ -97,8 +119,19 @@ table1_adj_p <-
     round(p.adjust(c(0.03369, 0.66945, 0.00001, 0.00001, 0.00002, 0.81631, 0.64358, 0.09838, 0.00009, 0.00789, 0.00001), method = "fdr"), 3)
 
 
-# create migraine PRS among Euro ancestry (white)
-# don't have PRS among African ancestry
+# household income bins in each group
+write.csv(
+    print(
+        CreateTableOne(
+            data = data_wide,
+            vars = "household_income",
+            strata = "headache_ever",
+            factorVars = "household_income",
+            includeNA = T
+        )
+    ),
+    "../outputs/table1_income_bins.csv"
+)
 ```
 
 ```{r}
@@ -169,7 +202,7 @@ write.csv(
 
 # FDR-adjusted p-values
 etable2_adj_p <- 
-    round(p.adjust(c(.74941, 0.00001, 0.00001, 0.36594, 0.61156, 0.71581, 0.00001, 0.81857, 0.00001, 0.91797, 0.81678, 0.00001, 0.00001, 0.00402), method = "fdr"), 3)
+    round(p.adjust(c(.74941, 0.00001, 0.00001, 0.36594, 0.61156, 0.71581, 0.00001, 0.81857, 0.00001, 0.91797, 0.81678, 0.00001, 0.00001, 0.00001, 0.00402), method = "fdr"), 3)
 ```
 
 

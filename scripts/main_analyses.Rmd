@@ -129,7 +129,7 @@ anova(mod3, mod4, test="Chisq")
 anova(mod4, mod5, test="Chisq") 
 
 # adj p
-round(p.adjust(c(1.279e-11, 0.0005176, 0, 0.0009439, 2.262e-11, 0.08518), method = "fdr"), 3)
+round(p.adjust(c(1.939e-11, 0.0007253, 0, 0.00119, 3.098e-11, 0.08736), method = "fdr"), 3)
 ```
 
 # Supplement - models on whole cohort

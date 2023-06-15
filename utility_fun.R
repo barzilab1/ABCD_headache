@@ -63,18 +63,18 @@ create_ever_var <- function(data, search_term, new_col_name) {
     return(data)
 }
 
-models <- function(outcome, predictor, variables, var_added) {
-    if (is.null(var_added)) {
-        model <- as.formula(paste0(outcome, " ~", paste0(c(
-            predictor, variables
-        ), collapse = " + "), sep = ""))
-    } else {
-        model <- as.formula(paste0(outcome, " ~", paste0(
-            c(predictor, variables, var_added), collapse = " + "
-        ), sep = ""))
-    }
-    return(model)
-}
+# models <- function(outcome, predictor, variables, var_added) {
+#     if (is.null(var_added)) {
+#         model <- as.formula(paste0(outcome, " ~", paste0(c(
+#             predictor, variables
+#         ), collapse = " + "), sep = ""))
+#     } else {
+#         model <- as.formula(paste0(outcome, " ~", paste0(
+#             c(predictor, variables, var_added), collapse = " + "
+#         ), sep = ""))
+#     }
+#     return(model)
+# }
 
 
 
@@ -173,12 +173,12 @@ exwas <- function(data_train, vars, outcome, data_test = data_test_scale, binary
     return(list(univariate_models_dat = univariate_models, univariate_models_sig = univariate_models_sig, data_test_exposome = data_test))
 }
 
-
+# This function give errors - not sure why
 # plot_cor <- function(vars) {
 #     cor = cor_auto(vars)
 #     testRes = cor.mtest(vars, conf.level = 0.95)
-#     return(corrplot(cor, p.mat = testRes$p, method = 'color', diag = FALSE, type = 'upper',
+#     plot <- corrplot(cor, p.mat = testRes$p, method = 'color', diag = FALSE, type = 'upper',
 #                      sig.level = c(0.001, 0.01, 0.05), pch.cex = 0.4,
 #                      insig = 'label_sig', pch.col = 'grey20', order = 'original', tl.col = "black", tl.srt = 45, tl.cex = 0.4, cl.cex = 0.8, cl.ratio = 0.2))
-#     # return(plot)
+#     return(plot)
 # }

@@ -52,7 +52,7 @@ dataset <- dataset %>%
     mutate(migraine_PRS_EUR = case_when(genetic_afr == 0 ~ migraine_PRS, TRUE ~ NA_real_))
 
 # Create binary variables
-## 2_Number of nocked unconscious: if >0: then code as 1 --- if =0: then code as 0
+## 2_Number of knocked unconscious: if >0: then code as 1 --- if =0: then code as 0
 ## 3_Number of head injuries: if >0: then code as 1 --- if =0: then code as 0
 ## 4_ worst injury overall: if >1: then code as 1 --- if =1: then code as 0
 ## 5_ my neighborhood is safe from crime: if <=2: then code as 1 --- if >2: then code as 0

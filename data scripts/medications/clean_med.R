@@ -18,7 +18,7 @@ for(colname in colnames_to_clean){
 medsy01 = medsy01[, colSums(is.na(medsy01)) != nrow(medsy01)]
 
 
-med_dataset = medsy01[,grepl("(src|interview_a|gender|event|brou|^med(.)*_rxnorm(_1yr)*_p$|med(.)*_2wk_p)", colnames(medsy01))]
+med_dataset = medsy01[,grepl("(src|interview_a|event|brou|^med(.)*_rxnorm(_1yr)*_p$|med(.)*_2wk_p)", colnames(medsy01))]
 
 setDT(med_dataset)
 # split the med name to get the numbers

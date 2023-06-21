@@ -18,7 +18,7 @@ for(colname in colnames_to_clean){
 medsy01 = medsy01[, colSums(is.na(medsy01)) != nrow(medsy01)]
 
 
-med_dataset = medsy01[,grepl("(src|interview_a|gender|event|brou|^med(.)*_rxnorm(_1yr)*_p$|med(.)*_2wk_p)", colnames(medsy01))]
+med_dataset = medsy01[,grepl("(src|interview_a|event|brou|^med(.)*_rxnorm(_1yr)*_p$|med(.)*_2wk_p)", colnames(medsy01))]
 
 setDT(med_dataset)
 # split the med name to get the numbers
@@ -55,7 +55,7 @@ for (j in 1:15) {
 #######################################################
 # create the medication table according to the tagging
 #######################################################
-tagged_med = read_excel(paste0(additional_files_path, "coded_meds_40623.xlsx"))
+tagged_med = read_excel(paste0(additional_files_path, "coded_meds_62223.xlsx"))
 
 #add medication category to each child according to tagging
 last_2wk_colnames = grep("_rxnorm_(2wk_)?p$",colnames(med_dataset),value = T)

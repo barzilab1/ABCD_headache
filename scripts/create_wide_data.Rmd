@@ -30,6 +30,8 @@ data_long <- data_long %>%
                               baseline_year_1_arm_1 = "baseline",
                               `1_year_follow_up_y_arm_1` = "1y",
                               `2_year_follow_up_y_arm_1` = "2y"))
+
+with(data_long, table(site_id_l_br, eventname))
 ```
 
 ```{r}
@@ -41,8 +43,8 @@ data_wide <-
     remove_empty(., which = c("rows", "cols"), quiet = TRUE) %>%
     # rename variables to use later
     dplyr::rename(
-        # use site id at 1-year
-        site_id_l_br = "site_id_l_br__bl",
+        # use site id at baseline
+        site_id_l_br = "site_id_l_br__baseline",
         # use parent education at 1y
         parents_avg_edu = "parents_avg_edu__1y",
         # use household income at 2y
@@ -52,10 +54,6 @@ data_wide <-
 
 # Create ever variables
 ```{r}
-# data_wide$headache_ever <- apply(data_wide[, grepl("medhx_2q", colnames(data_wide))], 1, function(x) {any(x == 1)*1}) # headache
-# data_wide$head_injury_ever <- apply(data_wide[, grepl("medhx_6i", colnames(data_wide))], 1, function(x) {any(x == 1)*1}) # head injury
-# data_wide$knocked_unconsc_ever <- apply(data_wide[, grepl("medhx_6j", colnames(data_wide))], 1, function(x) {any(x == 1)*1}) # knocked unconscious
-
 data_wide$age_years_mean <- rowMeans(data_wide[, which(grepl("age_years", colnames(data_wide)))], na.rm = T)
 
 data_wide <- create_ever_var(data = data_wide, search_term = "medhx_2q", new_col_name = "headache_ever")

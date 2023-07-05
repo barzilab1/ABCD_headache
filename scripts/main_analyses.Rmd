@@ -23,30 +23,14 @@ source("../config.R")
 
 # Read data
 ```{r}
-# data_long <- read.csv("../data/dataset_long.csv")
-
-# matched_data <- read.table(file = file.path(abcd_partition_path, "participants.tsv"), header = TRUE)
-# matched_data <- matched_data %>% 
-#     mutate(participant_id = str_replace_all(participant_id, "sub-", ""),
-#            participant_id = str_replace_all(participant_id, "NDAR", "NDAR_"))
+data_long <- read.csv("../data/dataset_long.csv")
 ```
 
 # Create discovery and testing subsets
 ```{r}
-# # Get IDs of participants in group 1
-# id_gr1 <- matched_data %>% filter(matched_group == 1) %>% pull(participant_id)
-# id_gr2 <- matched_data %>% filter(matched_group == 2) %>% pull(participant_id)
-# 
-# # Create ABCD dataset 1 & 2
-# abcd_gr1 <- data_long %>% filter(src_subject_id %in% id_gr1)
-# abcd_gr2 <- data_long %>% filter(src_subject_id %in% id_gr2)
-
-# Write data for sensitivity analysis
-# saveRDS(abcd_gr1, file = "../outputs/abcd_gr1.rds")
-# saveRDS(abcd_gr2, file = "../outputs/abcd_gr2.rds")
-
-abcd_gr1 <- readRDS("outputs/abcd_gr1.rds")
-abcd_gr2 <- readRDS("outputs/abcd_gr2.rds")
+# ABCD dataset 1 & 2
+abcd_gr1 <- readRDS("../outputs/abcd_gr1.rds")
+abcd_gr2 <- readRDS("../outputs/abcd_gr2.rds")
 ```
 
 # Univariate models on abcd_gr1
@@ -58,8 +42,7 @@ vars <- data_long %>%
 saveRDS(vars, "../outputs/vars_98.rds")
 ```
 
-# Create data for forest plot
-
+# Run univariate models
 ```{r}
 # Exwas 1 on original variables - get significant variables - Not FDR corrected p-values for headache project - No covariates
 exwas_headache <- exwas(data_train = abcd_gr1, vars = vars, outcome = "medhx_2q_l", data_test = abcd_gr2)
@@ -70,11 +53,11 @@ univariate_headache_sig <- exwas_headache$univariate_models_sig %>%
     mutate(low_ci = round(exp(low_ci), 2), high_ci = round(exp(high_ci), 2), 
            CI_95 = paste0(low_ci, " - ", high_ci), p_value = round(p_value, 3)) %>% 
     select(variable, OR, CI_95, p_value)
-write.csv(univariate_headache_sig, "../outputs/univariate_headache_sig_061323.csv")
+write.csv(univariate_headache_sig, "../outputs/univariate_headache_sig_070523.csv")
 
 sig_vars <- univariate_headache_sig %>% pull(variable)
 
-saveRDS(univariate_headache, file = "../outputs/univariate_plot_abcdgr1_coef_051523.rds") #univariate_plot_abcdgr1_coef_120922.rds
+saveRDS(univariate_headache, file = "../outputs/univariate_plot_abcdgr1_coef_070523.rds") #univariate_plot_abcdgr1_coef_120922.rds
 ```
 
 # Generate exposome score
@@ -85,8 +68,6 @@ sig_vars_bin <- sig_vars
 # Dichotomize 2 Likert variables
 sig_vars_bin[sig_vars_bin == "tbi_ss_worst_overall_l"] <- "tbi_worst_overall"
 sig_vars_bin[sig_vars_bin == "neighborhood3r_p"] <- "neighborh_notsafe"
-# sig_vars_bin[sig_vars_bin == "tbi_ss_worst_overall_l"] <- NULL
-# sig_vars_bin[sig_vars_bin == "neighborhood3r_p"] <- NULL
 
 exwas_headache_binary <- exwas(data_train = abcd_gr1, vars = sig_vars_bin, outcome = "medhx_2q_l", data_test = abcd_gr2)
 abcd_gr2_weight <- exwas_headache_binary$data_test_exposome
@@ -132,7 +113,7 @@ anova(mod3, mod4, test="Chisq")
 anova(mod4, mod5, test="Chisq") 
 
 # adj p
-round(p.adjust(c(1.939e-11, 0.0007253, 0, 0.00119, 3.098e-11, 0.08736), method = "fdr"), 3)
+round(p.adjust(c(9.83e-12, 0.0007253, 0, 0.001058, 1.406e-11, 0.07701), method = "fdr"), 3)
 ```
 
 # Supplement - models on whole cohort

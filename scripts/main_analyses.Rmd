@@ -51,7 +51,7 @@ univariate_headache <- exwas_headache$univariate_models_dat
 # eTable4
 univariate_headache_sig <- exwas_headache$univariate_models_sig %>% 
     mutate(low_ci = round(exp(low_ci), 2), high_ci = round(exp(high_ci), 2), 
-           CI_95 = paste0(low_ci, " - ", high_ci), p_value = round(p_value, 3)) %>% 
+           CI_90 = paste0(low_ci, " - ", high_ci), p_value = round(p_value, 3)) %>% 
     select(variable, OR, CI_95, p_value)
 write.csv(univariate_headache_sig, "../outputs/univariate_headache_sig_070523.csv")
 

@@ -42,7 +42,7 @@ abcd_gr2_weight_sens2 <- exwas_headache_2$data_test_exposome
 ```
 
 ```{r}
-# eTable 6
+# eTable 5
 mod1.2 <- glmer(medhx_2q_l ~ (1 | site_id_l_br/rel_family_id/src_subject_id) + 
                    age_years + age_years^2 + age_years^3 + sex_br + race_black + ethnicity_hisp,
               nAGQ = 0, family = binomial, data = abcd_gr2_weight_sens2 %>% filter(genetic_afr == 0))

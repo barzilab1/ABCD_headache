@@ -53,7 +53,7 @@ data_wide <-
 
 # Create ever variables
 ```{r}
-data_wide$age_years_mean <- rowMeans(data_wide[, which(grepl("age_years", colnames(data_wide)))], na.rm = T)
+# data_wide$age_years_mean <- rowMeans(data_wide[, which(grepl("age_years", colnames(data_wide)))], na.rm = T)
 
 data_wide <- create_ever_var(data = data_wide, search_term = "medhx_2q", new_col_name = "headache_ever")
 data_wide <- create_ever_var(data = data_wide, search_term = "medhx_6i", new_col_name = "head_injury_ever")

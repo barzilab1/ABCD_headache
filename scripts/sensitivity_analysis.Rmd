@@ -80,7 +80,7 @@ anova(mod3.2, mod4.2, test="Chisq")
 anova(mod4.2, mod5.2, test="Chisq") 
 
 # adj p
-round(p.adjust(c(3.774e-11, 0.0007253, 0, 0.001121, 5.7e-11, 0.1322), method = "fdr"), 3) 
+round(p.adjust(c(1.403e-11, 0.0007253, 0, 0.001012, 1.924e-11, 0.1001), method = "fdr"), 3) 
 ```
 
 

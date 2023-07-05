@@ -62,7 +62,7 @@ univariate_headache_plot <- univariate_headache_plot %>% arrange(desc(beta))
 
 
 # Forestplot
-png(file='../plots/forestplot_sig_vars_051523.png', units="in", width=17, height=8, res=620)
+png(file='../plots/forestplot_sig_vars_070523.png', units="in", width=17, height=8, res=620)
 
 forestplot(
   df = univariate_headache_plot,

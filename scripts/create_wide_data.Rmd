@@ -30,15 +30,14 @@ data_long <- data_long %>%
                               baseline_year_1_arm_1 = "baseline",
                               `1_year_follow_up_y_arm_1` = "1y",
                               `2_year_follow_up_y_arm_1` = "2y"))
-
-with(data_long, table(site_id_l_br, eventname))
+demo_income_age_2y <- read.csv("../data/demo_income_age_2y.csv")
 ```
 
 ```{r}
 data_wide <-
-    data_long %>% 
+    data_long %>% select(-age_years) %>% # not use age in long data as missing a lot (due to only ~6k kids have headache data at 2y)
     pivot_wider(., names_from = eventname, 
-                values_from = c(age_years, parents_avg_edu:site_id_l_br),
+                values_from = c(parents_avg_edu:site_id_l_br),
                 names_sep = "__") %>%
     remove_empty(., which = c("rows", "cols"), quiet = TRUE) %>%
     # rename variables to use later
@@ -46,10 +45,10 @@ data_wide <-
         # use site id at baseline
         site_id_l_br = "site_id_l_br__baseline",
         # use parent education at 1y
-        parents_avg_edu = "parents_avg_edu__1y",
-        # use household income at 2y
-        household_income = "household_income__2y"
-    )
+        parents_avg_edu = "parents_avg_edu__1y"
+        # not use household income at 2y as will have a lot of missing data, this is because we only have ~6k kids with headache data at 2y FU in data long
+    ) %>% 
+    left_join(demo_income_age_2y)
 ```
 
 # Create ever variables
@@ -62,7 +61,6 @@ data_wide <- create_ever_var(data = data_wide, search_term = "medhx_6j", new_col
 data_wide <- create_ever_var(data = data_wide, search_term = "Migraine.Medications_2w__", new_col_name = "migraine_med_2w_ever")
 data_wide <- create_ever_var(data = data_wide, search_term = "Daily.Preventive.medications_2w__", new_col_name = "daily_med_2w_ever")
 data_wide <- create_ever_var(data = data_wide, search_term = "Rescue.Medications_2w__", new_col_name = "rescue_med_2w_ever")
-data_wide <- create_ever_var(data = data_wide, search_term = "Migraine.Rescue.medications_2w__", new_col_name = "migraine_rescue_med_2w_ever")
 ```
 
 ```{r}

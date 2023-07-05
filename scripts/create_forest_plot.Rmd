@@ -18,7 +18,7 @@ library(ggplot2)
 ```
 
 ```{r}
-univariate_headache_plot <- readRDS("../outputs/univariate_plot_abcdgr1_coef_051523.rds") %>%  # univariate_plot_abcdgr1_coef_120922.rds
+univariate_headache_plot <- readRDS("../outputs/univariate_plot_abcdgr1_coef_070523.rds") %>%  # univariate_plot_abcdgr1_coef_120922.rds
     filter(significant_p0.1 == 1)
 
 univariate_headache_plot <- univariate_headache_plot %>% 
@@ -30,8 +30,9 @@ univariate_headache_plot <- univariate_headache_plot %>%
                                     tbi_ss_worst_overall_l = "TBI severity scale (improbable to severe)",
                                     medhx_6i_l = "Head injury requiring doctor's visit",
                                     tbi_1 = "Head injury or concussion requiring hospitalization",
+                                    tbi_2 = "Head injury from car accident/crashing moving vehicles",
                                     tbi_3 = "Head injury from fall/being hit something",
-                                    tbi_7a = "Multiple head injuries",
+                                    # tbi_7a = "Multiple head injuries",
                                     dim_yesno_q1 = "Experience of race/ethnicity/color discrimination in past year",
                                     neighborhood3r_p = "Neighborhood safety from crime",
                                     famhx_ss_momdad_alc_p = "Parental alcohol problem",

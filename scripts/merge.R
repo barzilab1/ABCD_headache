@@ -2,6 +2,7 @@ library(readr)
 library(dplyr)
 library(janitor)
 library(lubridate)
+library(stringr)
 source("config.R")
 
 demographics_all <- read_csv("data/demographics_all.csv") %>% mutate(interview_date = mdy(interview_date))
@@ -23,9 +24,9 @@ e_factor <- read_csv(file.path(e_factor_files_path, "ABCD_Exposome_bifactor_scor
 genetics <- read_csv(file.path(abcd_genetics_path, "genetic.csv")) %>% dplyr::select(src_subject_id, migraine_PRS, genetic_afr)
 
 # define headaches medications
-medications = medications[, grep("src|inter|event|Migraine|Daily.Preventive|Rescue.Medications", colnames(medications))]
-medications$any_migraine_med_2w = Reduce("|", medications[,c("Migraine.Medications_2w", "Daily.Preventive.medications_2w", "Rescue.Medications_2w")])*1
-medications$any_migraine_med_1yr = Reduce("|", medications[,c("Migraine.Medications_1yr", "Daily.Preventive.medications_1yr", "Rescue.Medications_1yr")])*1
+# medications = medications[, grep("src|inter|event|Migraine|Daily.Preventive|Rescue.Medications", colnames(medications))]
+# medications$any_migraine_med_2w = Reduce("|", medications[,c("Migraine.Medications_2w", "Daily.Preventive.medications_2w", "Rescue.Medications_2w")])*1
+# medications$any_migraine_med_1yr = Reduce("|", medications[,c("Migraine.Medications_1yr", "Daily.Preventive.medications_1yr", "Rescue.Medications_1yr")])*1
 
 # Merge data
 dataset = merge(demographics, medications, all.x = T)
@@ -43,50 +44,34 @@ dataset = merge(dataset, geo_data, all.x = T)
 # Create new variables
 dataset <- dataset %>%
     # Age in years
-    mutate(age_years = interview_age/12) %>%
-
-    # Create bad(yes, no) life events
-    mutate(across(contains("fu_"), ~case_when(.x == 2 ~ 1, .x == 1 ~ 0, TRUE ~ NA_real_), .names = "{col}_bad")) %>%
-
+    mutate(age_years = interview_age/12,
     # Create migraine PRS among only European ancestry (for convenience)
-    mutate(migraine_PRS_EUR = case_when(genetic_afr == 0 ~ migraine_PRS, TRUE ~ NA_real_))
-
-# Create binary variables
-## 2_Number of knocked unconscious: if >0: then code as 1 --- if =0: then code as 0
-## 3_Number of head injuries: if >0: then code as 1 --- if =0: then code as 0
-## 4_ worst injury overall: if >1: then code as 1 --- if =1: then code as 0
-## 5_ my neighborhood is safe from crime: if <=2: then code as 1 --- if >2: then code as 0
-## 6_ discrimination measure: if >1: then code as 1 --- if =1: then code as 0
-## 7_area deprivation: if <=10th percentile; then =1 --- if >10th percentile; then =0
-# For sensitivity analysis 2 (P=0.5)
-## 8-neighborhood_crime_y
-## 9-neighborhood2r_p
-dataset <- dataset %>%
-    mutate(
-        knocked_unconscious = case_when(medhx_ss_6j_times_p_l > 0 ~ 1, TRUE ~ as.numeric(medhx_ss_6j_times_p_l)),
-        head_injuries = case_when(medhx_ss_6i_times_p_l > 0 ~ 1, TRUE ~ as.numeric(medhx_ss_6i_times_p_l)),
-        tbi_worst_overall = case_when(tbi_ss_worst_overall_l == 1 ~ 0, tbi_ss_worst_overall_l > 1 ~ 1, TRUE ~ as.numeric(tbi_ss_worst_overall_l)),
-        neighborh_notsafe = case_when(neighborhood3r_p <= 2 ~ 1, neighborhood3r_p > 2 ~ 0, TRUE ~ as.numeric(neighborhood3r_p)),
-        neighborh_notsafe_y = case_when(neighborhood_crime_y <= 2 ~ 1, neighborhood_crime_y > 2 ~ 0, TRUE ~ as.numeric(neighborhood_crime_y)),
-        neighborh_violence = case_when(neighborhood2r_p <= 2 ~ 1, neighborhood2r_p > 2 ~ 0, TRUE ~ as.numeric(neighborhood2r_p)),
-        discrimination = case_when(dim_y_ss_mean == 1 ~ 0, dim_y_ss_mean > 1 ~ 1, TRUE ~ as.numeric(dim_y_ss_mean)),
-        ADI_10perc =
-            case_when(reshist_addr1_adi_perc <= (quantile(dataset$reshist_addr1_adi_perc, probs = 0.1, na.rm = T)) ~ 1,
-                      reshist_addr1_adi_perc > (quantile(dataset$reshist_addr1_adi_perc, probs = 0.1, na.rm = T)) ~ 0,
-                      TRUE ~ NA_real_) # protective # BOTTOM 10% ~ 1
-    )
+    migraine_PRS_EUR = case_when(genetic_afr == 0 ~ migraine_PRS, TRUE ~ NA_real_))
 
 # Remove empty rows and columns
 dataset <- dataset %>% remove_empty(c("rows","cols")) %>%
     # Remove rows with missing values of headache
-    filter(!is.na(medhx_2q_l),
-
-           # Only use data at baseline, 1-year and 2-year
-           eventname != "3_year_follow_up_y_arm_1")
+    filter(!is.na(medhx_2q_l), eventname != "3_year_follow_up_y_arm_1")
 
 write.csv(file = "data/dataset_long.csv", x = dataset, row.names = F, na = "")
 
+# Create discovery and testing sets
+matched_data <- read.table(file = file.path(abcd_partition_path, "participants.tsv"), header = TRUE)
+matched_data <- matched_data %>%
+    mutate(participant_id = str_replace_all(participant_id, "sub-", ""),
+           participant_id = str_replace_all(participant_id, "NDAR", "NDAR_"))
 
+# Get IDs of participants in group 1
+id_gr1 <- matched_data %>% filter(matched_group == 1) %>% pull(participant_id)
+id_gr2 <- matched_data %>% filter(matched_group == 2) %>% pull(participant_id)
+
+# Create ABCD dataset 1 & 2
+abcd_gr1 <- dataset %>% filter(src_subject_id %in% id_gr1)
+abcd_gr2 <- dataset %>% filter(src_subject_id %in% id_gr2)
+
+# Write data for sensitivity analysis
+saveRDS(abcd_gr1, file = "outputs/abcd_gr1.rds")
+saveRDS(abcd_gr2, file = "outputs/abcd_gr2.rds")
 
 
 

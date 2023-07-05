@@ -31,9 +31,6 @@ for (j in cols_to_fix)
   set(med_dataset, j = j, value = as.numeric(med_dataset[[j]]))
 
 
-# Add used topiramate 1162750, 151227, 152855, 38404, 901334
-med_dataset$topiramate = apply(med_dataset %>% select(all_of(cols_to_fix)),1 ,function(x) {any(x %in% c("1162750", "151227", "152855", "38404", "901334"))*1})
-
 # copy the medications number from last 1 year to last 2 wk
 for (j in 1:15) {
 
@@ -48,9 +45,6 @@ for (j in 1:15) {
   med_dataset[get(col_name_2w) ==1, (new_col_name) := .SD, .SDcols= col_name_1y]
   med_dataset[get(col_name_2w_otc) ==1, (new_col_name_otc) := .SD, .SDcols= col_name_1y_otc]
 }
-
-# med_dataset[,View(.SD), .SDcols = c(grepl("med_otc_10_(rxnorm_)?(2wk|1yr)", colnames(med_dataset)))]
-
 
 #######################################################
 # create the medication table according to the tagging

@@ -43,5 +43,5 @@ mhp02 = mhp02[,grepl("^(src|interview|event|sex)|(score)$",colnames(mhp02))]
 psychopathology_sum_scores = merge(mhy,mhp02)
 
 
-write.csv(file = "data/psychopathology_sum_scores.csv",x = psychopathology_sum_scores, row.names = F, na = "")
+write.csv(file = "data/psychopathology_sum_scores.csv", x = psychopathology_sum_scores, row.names = F, na = "")
 

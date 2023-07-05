@@ -20,57 +20,57 @@ demographics_long = bind_rows(demographics_baseline, demographics_long)
 # The U.S. Census Bureau defines “deep poverty” as living in a household with a total cash income below 50 percent of its poverty threshold.
 
 
-demographics_long <- demographics_long %>%
-    mutate(median_income = case_when(
-        household_income == 1 ~ median(seq(1, 4999, 1)),
-        household_income == 2 ~ median(seq(5000, 11999, 1)),
-        household_income == 3 ~ median(seq(12000, 15999, 1)),
-        household_income == 4 ~ median(seq(16000, 24999, 1)),
-        household_income == 5 ~ median(seq(25000, 34999, 1)),
-        household_income == 6 ~ median(seq(35000, 49999, 1)),
-        household_income == 7 ~ median(seq(50000, 74999, 1)),
-        household_income == 8 ~ median(seq(75000, 99999, 1)),
-        household_income == 9 ~ median(seq(100000, 199999, 1)),
-        household_income == 10 ~ median(seq(200000, 299999, 1))
-        # 200000 is higher than the threshold of a household of 20 people (maximum number of household members in ABCD study is 19) (41320 + 12*4180 = 91480)
-        # assume the max of group 10 is 299999 so that median is 249999.5 (higher than 200k
-    ))
-
-demographics_long <- demographics_long %>%
-    # add poverty threshold according to the number of hh members
-    # https://aspe.hhs.gov/topics/poverty-economic-mobility/poverty-guidelines/prior-hhs-poverty-guidelines-federal-register-references/2017-poverty-guidelines
-    mutate(pov_threshold = case_when(
-        demo_roster_v2 == 1 ~ 12060,
-        demo_roster_v2 == 2 ~ 16240,
-        demo_roster_v2 == 3 ~ 20420,
-        demo_roster_v2 == 4 ~ 24600,
-        demo_roster_v2 == 5 ~ 28780,
-        demo_roster_v2 == 6 ~ 32960,
-        demo_roster_v2 == 7 ~ 37140,
-        demo_roster_v2 == 8 ~ 41320,
-        demo_roster_v2 == 9 ~ (41320 + 4180),
-        demo_roster_v2 == 10 ~ (41320 + 2*4180),
-        demo_roster_v2 == 11 ~ (41320 + 3*4180),
-        demo_roster_v2 == 12 ~ (41320 + 4*4180),
-        demo_roster_v2 == 13 ~ (41320 + 5*4180),
-        demo_roster_v2 == 14 ~ (41320 + 6*4180),
-        demo_roster_v2 == 15 ~ (41320 + 7*4180),
-        demo_roster_v2 == 16 ~ (41320 + 8*4180),
-        demo_roster_v2 == 17 ~ (41320 + 9*4180),
-        demo_roster_v2 == 18 ~ (41320 + 10*4180),
-        demo_roster_v2 == 19 ~ (41320 + 11*4180),
-        demo_roster_v2 == 20 ~ (41320 + 12*4180),
-        TRUE ~ NA_real_
-    ))
-
-demographics_long <- demographics_long %>%
-    mutate(income_to_needs_ratio = median_income/pov_threshold,
-
-           fam_under_poverty_line = case_when(
-               median_income < pov_threshold ~ 1,
-               median_income >= pov_threshold ~ 0,
-               TRUE ~ NA_real_
-           ))
+# demographics_long <- demographics_long %>%
+#     mutate(median_income = case_when(
+#         household_income == 1 ~ median(seq(1, 4999, 1)),
+#         household_income == 2 ~ median(seq(5000, 11999, 1)),
+#         household_income == 3 ~ median(seq(12000, 15999, 1)),
+#         household_income == 4 ~ median(seq(16000, 24999, 1)),
+#         household_income == 5 ~ median(seq(25000, 34999, 1)),
+#         household_income == 6 ~ median(seq(35000, 49999, 1)),
+#         household_income == 7 ~ median(seq(50000, 74999, 1)),
+#         household_income == 8 ~ median(seq(75000, 99999, 1)),
+#         household_income == 9 ~ median(seq(100000, 199999, 1)),
+#         household_income == 10 ~ median(seq(200000, 299999, 1))
+#         # 200000 is higher than the threshold of a household of 20 people (maximum number of household members in ABCD study is 19) (41320 + 12*4180 = 91480)
+#         # assume the max of group 10 is 299999 so that median is 249999.5 (higher than 200k
+#     ))
+#
+# demographics_long <- demographics_long %>%
+#     # add poverty threshold according to the number of hh members
+#     # https://aspe.hhs.gov/topics/poverty-economic-mobility/poverty-guidelines/prior-hhs-poverty-guidelines-federal-register-references/2017-poverty-guidelines
+#     mutate(pov_threshold = case_when(
+#         demo_roster_v2 == 1 ~ 12060,
+#         demo_roster_v2 == 2 ~ 16240,
+#         demo_roster_v2 == 3 ~ 20420,
+#         demo_roster_v2 == 4 ~ 24600,
+#         demo_roster_v2 == 5 ~ 28780,
+#         demo_roster_v2 == 6 ~ 32960,
+#         demo_roster_v2 == 7 ~ 37140,
+#         demo_roster_v2 == 8 ~ 41320,
+#         demo_roster_v2 == 9 ~ (41320 + 4180),
+#         demo_roster_v2 == 10 ~ (41320 + 2*4180),
+#         demo_roster_v2 == 11 ~ (41320 + 3*4180),
+#         demo_roster_v2 == 12 ~ (41320 + 4*4180),
+#         demo_roster_v2 == 13 ~ (41320 + 5*4180),
+#         demo_roster_v2 == 14 ~ (41320 + 6*4180),
+#         demo_roster_v2 == 15 ~ (41320 + 7*4180),
+#         demo_roster_v2 == 16 ~ (41320 + 8*4180),
+#         demo_roster_v2 == 17 ~ (41320 + 9*4180),
+#         demo_roster_v2 == 18 ~ (41320 + 10*4180),
+#         demo_roster_v2 == 19 ~ (41320 + 11*4180),
+#         demo_roster_v2 == 20 ~ (41320 + 12*4180),
+#         TRUE ~ NA_real_
+#     ))
+#
+# demographics_long <- demographics_long %>%
+#     mutate(income_to_needs_ratio = median_income/pov_threshold,
+#
+#            fam_under_poverty_line = case_when(
+#                median_income < pov_threshold ~ 1,
+#                median_income >= pov_threshold ~ 0,
+#                TRUE ~ NA_real_
+#            ))
 
 
 

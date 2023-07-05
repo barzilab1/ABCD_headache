@@ -23,27 +23,30 @@ source("../config.R")
 
 # Read data
 ```{r}
-data_long <- read.csv("../data/dataset_long.csv")
+# data_long <- read.csv("../data/dataset_long.csv")
 
-matched_data <- read.table(file = file.path(abcd_partition_path, "participants.tsv"), header = TRUE)
-matched_data <- matched_data %>% 
-    mutate(participant_id = str_replace_all(participant_id, "sub-", ""),
-           participant_id = str_replace_all(participant_id, "NDAR", "NDAR_"))
+# matched_data <- read.table(file = file.path(abcd_partition_path, "participants.tsv"), header = TRUE)
+# matched_data <- matched_data %>% 
+#     mutate(participant_id = str_replace_all(participant_id, "sub-", ""),
+#            participant_id = str_replace_all(participant_id, "NDAR", "NDAR_"))
 ```
 
 # Create discovery and testing subsets
 ```{r}
-# Get IDs of participants in group 1
-id_gr1 <- matched_data %>% filter(matched_group == 1) %>% pull(participant_id)
-id_gr2 <- matched_data %>% filter(matched_group == 2) %>% pull(participant_id)
-
-# Create ABCD dataset 1 & 2
-abcd_gr1 <- data_long %>% filter(src_subject_id %in% id_gr1)
-abcd_gr2 <- data_long %>% filter(src_subject_id %in% id_gr2)
+# # Get IDs of participants in group 1
+# id_gr1 <- matched_data %>% filter(matched_group == 1) %>% pull(participant_id)
+# id_gr2 <- matched_data %>% filter(matched_group == 2) %>% pull(participant_id)
+# 
+# # Create ABCD dataset 1 & 2
+# abcd_gr1 <- data_long %>% filter(src_subject_id %in% id_gr1)
+# abcd_gr2 <- data_long %>% filter(src_subject_id %in% id_gr2)
 
 # Write data for sensitivity analysis
-saveRDS(abcd_gr1, file = "../outputs/abcd_gr1.rds")
-saveRDS(abcd_gr2, file = "../outputs/abcd_gr2.rds")
+# saveRDS(abcd_gr1, file = "../outputs/abcd_gr1.rds")
+# saveRDS(abcd_gr2, file = "../outputs/abcd_gr2.rds")
+
+abcd_gr1 <- readRDS("outputs/abcd_gr1.rds")
+abcd_gr2 <- readRDS("outputs/abcd_gr2.rds")
 ```
 
 # Univariate models on abcd_gr1
@@ -82,8 +85,8 @@ sig_vars_bin <- sig_vars
 # Dichotomize 2 Likert variables
 sig_vars_bin[sig_vars_bin == "tbi_ss_worst_overall_l"] <- "tbi_worst_overall"
 sig_vars_bin[sig_vars_bin == "neighborhood3r_p"] <- "neighborh_notsafe"
-sig_vars_bin[sig_vars_bin == "tbi_ss_worst_overall_l"] <- NULL
-sig_vars_bin[sig_vars_bin == "neighborhood3r_p"] <- NULL
+# sig_vars_bin[sig_vars_bin == "tbi_ss_worst_overall_l"] <- NULL
+# sig_vars_bin[sig_vars_bin == "neighborhood3r_p"] <- NULL
 
 exwas_headache_binary <- exwas(data_train = abcd_gr1, vars = sig_vars_bin, outcome = "medhx_2q_l", data_test = abcd_gr2)
 abcd_gr2_weight <- exwas_headache_binary$data_test_exposome

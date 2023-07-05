@@ -11,13 +11,20 @@ ydmes01 <- ydmes01[, grepl("src|interview|sex|event|yesno", colnames(ydmes01))]
 
 ########### Youth Neighborhood Safety/Crime ###########
 nsc01 = load_instrument("abcd_nsc01",abcd_files_path)
-
+nsc01 = nsc01 %>% mutate(neighborh_notsafe_y = case_when(neighborhood_crime_y <= 2 ~ 1, neighborhood_crime_y > 2 ~ 0, TRUE ~ as.numeric(neighborhood_crime_y)))
 
 ########### Parent Neighborhood Safety/Crime ###########
 pnsc01 = load_instrument("abcd_pnsc01",abcd_files_path)
 pnsc01 = pnsc01[, !(colnames(pnsc01) %in% c("nei_p_select_language___1"))]
-
-
+# Create binary variables
+## 5_ my neighborhood is safe from crime: if <=2: then code as 1 --- if >2: then code as 0
+# For sensitivity analysis 2 (P=0.5)
+## 9-neighborhood2r_p
+pnsc01 <- pnsc01 %>%
+    mutate(
+        neighborh_notsafe = case_when(neighborhood3r_p <= 2 ~ 1, neighborhood3r_p > 2 ~ 0, TRUE ~ as.numeric(neighborhood3r_p)),
+        neighborh_violence = case_when(neighborhood2r_p <= 2 ~ 1, neighborhood2r_p > 2 ~ 0, TRUE ~ as.numeric(neighborhood2r_p))
+    )
 
 ########### Parent Family History Summary Scores ###########
 fhxssp01 = load_instrument("abcd_fhxssp01",abcd_files_path)
@@ -26,12 +33,6 @@ fhxssp01 = fhxssp01[, grepl("src|interview|event|sex|(fath|moth|momdad)_.*?(alc|
 # Remove information of baseline --> carry one the history to later time points
 fhxssp01 <- fhxssp01[, !(names(fhxssp01) %in% c("eventname", "interview_date", "interview_age", "sex"))]
 
-# -1 or -2 (missing father/mother) will be NA
-fhxssp01[fhxssp01 == -1 | fhxssp01 == -2] <- NA
-
-#TODO check for each time point
-#remove columns with more than 20% NA
-# fhxssp01 = fhxssp01[,-which(colSums(is.na(fhxssp01)) >= 0.2*dim(fhxssp01)[1])]
 
 ########### Youth Life Events ###########
 yle01 = load_instrument("abcd_yle01",abcd_files_path)
@@ -40,6 +41,8 @@ yle01 = yle01[, grepl("src|interview|event|sex|(_fu_y)$|(e[d|p]|u[r|d|e]|m[e|h]|
 # 6 and 7 will be NA
 yle01[yle01 == 6 | yle01 == 7] <- NA
 
+# Create bad(yes, no) life events
+yle01 <- yle01 %>% mutate(across(contains("fu_"), ~case_when(.x == 2 ~ 1, .x == 1 ~ 0, TRUE ~ NA_real_), .names = "{col}_bad"))
 
 ########### family relationship section ###########
 acspsw03 = load_instrument("acspsw03",abcd_files_path)

@@ -63,35 +63,18 @@ create_ever_var <- function(data, search_term, new_col_name) {
     return(data)
 }
 
-# models <- function(outcome, predictor, variables, var_added) {
-#     if (is.null(var_added)) {
-#         model <- as.formula(paste0(outcome, " ~", paste0(c(
-#             predictor, variables
-#         ), collapse = " + "), sep = ""))
-#     } else {
-#         model <- as.formula(paste0(outcome, " ~", paste0(
-#             c(predictor, variables, var_added), collapse = " + "
-#         ), sep = ""))
-#     }
-#     return(model)
-# }
-
-
-
 get_formula <- function(outcome, predictor, random_eff, var_added = NULL) {
     if (is.null(var_added)) {
-        model_formula <- as.formula(paste0(outcome, " ~", paste0(c(
-            predictor, random_eff
-        ), collapse = " + "), sep = ""))
+        model_formula <- reformulate(c(predictor, random_eff), response = outcome)
     } else {
-        model_formula <- as.formula(paste0(outcome, " ~", paste0(
-            c(predictor, random_eff, var_added), collapse = " + "
-        ), sep = ""))
+        model_formula <- reformulate(c(predictor, var_added, random_eff), response = outcome)
     }
     return(model_formula)
 }
 
-get_est <- function(outcome, predictor, random_eff = "(1 | site_id_l_br/rel_family_id/src_subject_id)", var_added = NULL, data, binary_DV = T, conf_int = 0.9) { #output,
+
+random_effects <- "(1 | site_id_l_br/rel_family_id/src_subject_id)"
+get_est <- function(outcome, predictor, data, random_eff = random_effects, var_added = NULL, binary_DV = T, conf_int = 0.9) { #output,
 
     # Turn predictor to numeric (in case predictor is binary) - otherwise models will show results predictor == 1
     if(is.factor(predictor)) data <- data %>% mutate(predictor = as.numeric(as.character(predictor)))
@@ -106,8 +89,7 @@ get_est <- function(outcome, predictor, random_eff = "(1 | site_id_l_br/rel_fami
 
     if(!binary_DV) {
         # Continuous outcome
-        model <- tryCatch(lmer(get_formula(outcome = outcome, predictor = predictor, random_eff = random_eff, var_added = var_added),
-                               data = data,
+        model <- tryCatch(lmer(get_formula(outcome = outcome, predictor = predictor, data = data, random_eff = random_eff, var_added = var_added),
                                control=lmerControl(check.nobs.vs.nlev = "ignore",
                                                    check.nobs.vs.rankZ = "ignore",
                                                    check.nobs.vs.nRE = "ignore",
@@ -116,29 +98,30 @@ get_est <- function(outcome, predictor, random_eff = "(1 | site_id_l_br/rel_fami
         output <- data.frame("variable" = NA, "coef" = NA, "p_value" = NA, "std_error" = NA, "t_value" = NA,"low_ci" = NA, "high_ci" = NA)
     }
 
-    if(binary_DV) {
+    else {
         # Binary outcome
-        model <- tryCatch(glmer(get_formula(outcome = outcome, predictor = predictor, random_eff = random_eff, var_added = var_added),
-                                family = binomial, data = data, nAGQ = 0), error = function(e) "Notrun")
+        model <- tryCatch(glmer(get_formula(outcome = outcome, predictor = predictor, data = data, random_eff = random_eff, var_added = var_added),
+                                family = binomial, nAGQ = 0), error = function(e) "Notrun")
 
         output <- data.frame("variable" = NA, "coef" = NA, "OR" = NA, "p_value" = NA, "std_error" = NA, "t_value" = NA, "low_ci" = NA, "high_ci" = NA)
     }
 
     mixed_eff <- tryCatch(tidy(model, effects = "fixed", conf.int = T, conf.level = conf_int), error = function(e) "NA")
-    p_value <- tryCatch(parameters::p_value(model) %>% filter(Parameter == predictor) %>% pull(p), error = function(e) 9999999) # as tidy function does not give p-values for the lmer model
-    coef <- tryCatch(mixed_eff %>% filter(term == predictor) %>% pull(estimate), error = function(e) 9999999)
-    std_error <- tryCatch(mixed_eff %>% filter(term == predictor) %>% pull(std.error), error = function(e) 9999999)
-    t_value <- tryCatch(mixed_eff %>% filter(term == predictor) %>% pull(statistic), error = function(e) 9999999)
-    low_ci <- tryCatch(mixed_eff %>% filter(term == predictor) %>% pull(conf.low), error = function(e) 9999999)
-    high_ci <- tryCatch(mixed_eff %>% filter(term == predictor) %>% pull(conf.high), error = function(e) 9999999)
+    # p_value <- tryCatch(parameters::p_value(model) %>% filter(Parameter == predictor) %>% pull(p), error = function(e) 9999999) # as tidy function does not give p-values for the lmer model
+    # coef <- tryCatch(mixed_eff %>% filter(term == predictor) %>% pull(estimate), error = function(e) 9999999)
+    # std_error <- tryCatch(mixed_eff %>% filter(term == predictor) %>% pull(std.error), error = function(e) 9999999)
+    # t_value <- tryCatch(mixed_eff %>% filter(term == predictor) %>% pull(statistic), error = function(e) 9999999)
+    # low_ci <- tryCatch(mixed_eff %>% filter(term == predictor) %>% pull(conf.low), error = function(e) 9999999)
+    # high_ci <- tryCatch(mixed_eff %>% filter(term == predictor) %>% pull(conf.high), error = function(e) 9999999)
 
     output[, "variable"] <- tryCatch(predictor, error = function(e) "NA")
-    output[, "coef"] <- tryCatch(coef, error = function(e) 9999999)
-    output[, "p_value"] <- tryCatch(p_value, error = function(e) 9999999)
-    output[, "std_error"] <- tryCatch(round(std_error, 3), error = function(e) 9999999)
-    output[, "t_value"] <- tryCatch(round(t_value, 3), error = function(e) 9999999)
-    output[, "low_ci"] <- tryCatch(round(low_ci, 3), error = function(e) 9999999)
-    output[, "high_ci"] <- tryCatch(round(high_ci, 3), error = function(e) 9999999)
+    output[, "coef"] <- tryCatch(mixed_eff %>% filter(term == predictor) %>% pull(estimate), error = function(e) 9999999)
+    output[, "p_value"] <- tryCatch(parameters::p_value(model) %>% filter(Parameter == predictor) %>% pull(p), error = function(e) 9999999)
+    # output[, "std_error"] <- tryCatch(round(tryCatch(mixed_eff %>% filter(term == predictor) %>% pull(std.error), error = function(e) 9999999), 3), error = function(e) 9999999)
+    output[, "std_error"] <- round(tryCatch(mixed_eff %>% filter(term == predictor) %>% pull(std.error), error = function(e) 9999999), 3)
+    output[, "t_value"] <- round(tryCatch(mixed_eff %>% filter(term == predictor) %>% pull(statistic), error = function(e) 9999999), 3)
+    output[, "low_ci"] <- round(tryCatch(mixed_eff %>% filter(term == predictor) %>% pull(conf.low), error = function(e) 9999999), 3)
+    output[, "high_ci"] <- round(tryCatch(mixed_eff %>% filter(term == predictor) %>% pull(conf.high), error = function(e) 9999999), 3)
 
     if (binary_DV) {
         output[, "OR"] <- tryCatch(round(exp(coef), 3), error = function(e) 9999999)

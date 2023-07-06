@@ -172,7 +172,7 @@ write.csv(
         catDigits = 2,
         contDigits = 2
     ),
-    "../outputs/etable3_main_values_070523.csv"
+    "../outputs/etable2_main_values_070523.csv"
 )
 
 table2_adj_p <- round(p.adjust(c(0.00001, 0.00001), method = "fdr"), 3)

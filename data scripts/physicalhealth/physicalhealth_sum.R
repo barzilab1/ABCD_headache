@@ -27,7 +27,6 @@ lsstbi01 = load_instrument("abcd_lsstbi01", abcd_files_path)
 lsstbi01 = lsstbi01[,!grepl("_nm",colnames(lsstbi01))]
 
 
-abcd_lpohstbi01
 physicalhealth_sum = bind_rows(medhxss01, lssmh01)
 tbi = bind_rows(tbi01, lsstbi01)
 physicalhealth_sum = merge(physicalhealth_sum, tbi)

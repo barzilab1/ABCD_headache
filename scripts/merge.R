@@ -50,6 +50,13 @@ dataset <- dataset %>% remove_empty(c("rows","cols")) %>%
 
 write.csv(file = "data/dataset_long.csv", x = dataset, row.names = F, na = "")
 
+# Extract list of 98 exposures
+vars <- dataset %>%
+    dplyr::select(matches(c("d_inc|famhx_ss_mom|dim_y|harm(2?)$|bully|hood(_?)[^_P]|nsc_|adi.*_[irmp]|pmq|fes_y.*_fc$|crpbi|srpf|macv_y.*fs|ple.*[^fu]_(y|fu_y_bad)$|hx.*[26][ij]|tbi.*_l$|tbi_[123457]|cat$|alcohol$|tobacco$"))) %>% names() # 98 vars
+
+saveRDS(vars, "outputs/vars_98.rds")
+
+
 # Create discovery and testing sets
 matched_data <- read.table(file = file.path(abcd_partition_path, "participants.tsv"), header = TRUE)
 matched_data <- matched_data %>%

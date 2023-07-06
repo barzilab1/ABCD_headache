@@ -56,7 +56,6 @@ univariate_headache_sig <- exwas_headache$univariate_models_sig %>%
     select(variable, OR, CI_90, p_value) %>% 
     arrange(OR)
 
-# write.csv(univariate_headache_sig, "../outputs/univariate_headache_sig_070523.csv")
 write.csv(univariate_headache_sig, "../outputs/univariate_headache_sig_070523.csv")
 
 sig_vars <- univariate_headache_sig %>% pull(variable)
@@ -152,11 +151,6 @@ r2(mod21)[2]
 r2(mod22)[2]
 
 anova(mod21, mod22, test="Chisq")
-```
-
-
-```{r}
-test_mod <- get_est_2(outcome = "medhx_2q_l", predictor = vars[24], data = abcd_gr1, random_eff = "(1 | site_id_l_br/rel_family_id/src_subject_id)")
 ```
 
 

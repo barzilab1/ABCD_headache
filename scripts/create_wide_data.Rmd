@@ -20,8 +20,6 @@ source("../utility_fun.R")
 
 ```{r}
 # Choose variables needed for table 1
-# headache never 0s at all timepoints - compare demo, med, PRS, domains of exposomes
-# Compare included and not included demo variables in supp (not age) sex race edu income
 data_long <- read.csv("../data/dataset_long.csv")
 data_long <- data_long %>% 
     dplyr::select(matches(c("src", "eventn", "age_years", "sex_br", "race", "eth", "edu", "household_in", 
@@ -53,8 +51,6 @@ data_wide <-
 
 # Create ever variables
 ```{r}
-# data_wide$age_years_mean <- rowMeans(data_wide[, which(grepl("age_years", colnames(data_wide)))], na.rm = T)
-
 data_wide <- create_ever_var(data = data_wide, search_term = "medhx_2q", new_col_name = "headache_ever")
 data_wide <- create_ever_var(data = data_wide, search_term = "medhx_6i", new_col_name = "head_injury_ever")
 data_wide <- create_ever_var(data = data_wide, search_term = "medhx_6j", new_col_name = "knocked_unconsc_ever")

@@ -59,7 +59,7 @@ write.csv(univariate_headache_sig, "../outputs/univariate_headache_sig_070523.cs
 
 sig_vars <- univariate_headache_sig %>% pull(variable)
 
-saveRDS(univariate_headache, file = "../outputs/univariate_plot_abcdgr1_coef_070523.rds") #univariate_plot_abcdgr1_coef_120922.rds
+saveRDS(univariate_headache, file = "../outputs/univariate_plot_abcdgr1_coef_070523.rds")
 ```
 
 # Check correlation of significant variables

@@ -23,11 +23,6 @@ e_factor <- read_csv(file.path(e_factor_files_path, "ABCD_Exposome_bifactor_scor
     select(-ID)
 genetics <- read_csv(file.path(abcd_genetics_path, "genetic.csv")) %>% dplyr::select(src_subject_id, migraine_PRS, genetic_afr)
 
-# define headaches medications
-# medications = medications[, grep("src|inter|event|Migraine|Daily.Preventive|Rescue.Medications", colnames(medications))]
-# medications$any_migraine_med_2w = Reduce("|", medications[,c("Migraine.Medications_2w", "Daily.Preventive.medications_2w", "Rescue.Medications_2w")])*1
-# medications$any_migraine_med_1yr = Reduce("|", medications[,c("Migraine.Medications_1yr", "Daily.Preventive.medications_1yr", "Rescue.Medications_1yr")])*1
-
 # Merge data
 dataset = merge(demographics, medications, all.x = T)
 dataset = merge(dataset, physicalhealth_sum, all.x = T)

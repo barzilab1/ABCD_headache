@@ -98,7 +98,7 @@ get_est <- function(outcome, predictor, data, random_eff = random_effects, var_a
                                                    check.nobs.vs.nRE = "ignore",
                                                    optimizer = "bobyqa", optCtrl = list(maxfun = 2e5))), error = function(e) loadErrors[["predictor"]] <- TRUE)
 
-        output <- data.frame("variable" = NA, "coef" = NA, "p_value" = NA, "std_error" = NA, "t_value" = NA,"low_ci" = NA, "high_ci" = NA)
+        output <- data.frame("variable" = predictor, "coef" = NA, "p_value" = NA, "std_error" = NA, "t_value" = NA,"low_ci" = NA, "high_ci" = NA)
     }
 
     else {

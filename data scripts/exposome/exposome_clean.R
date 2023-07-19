@@ -65,7 +65,8 @@ dhx01$accult_select_language = NULL
 dhx01 = dhx01[,colSums(is.na(dhx01)) != nrow(dhx01)]
 dhx01$devhx_1_p = NULL
 
-dhx01 <- dhx01[, grepl("src|interview|sex|event|devhx_9_(to|al)", colnames(dhx01))]
+# dhx01 <- dhx01[, grepl("src|interview|sex|event|devhx_9_(to|al)", colnames(dhx01))]
+dhx01 <- dhx01[, grepl("src|sex|devhx_9_(to|al)", colnames(dhx01))]
 
 
 

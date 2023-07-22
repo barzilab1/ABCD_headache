@@ -17,6 +17,8 @@ library(performance)
 library(janitor)
 library(dplyr)
 library(purrr)
+library(qgraph)
+library(caret)
 source("../utility_fun.R")
 source("../config.R")
 ```
@@ -67,15 +69,14 @@ saveRDS(univariate_headache, file = "../outputs/univariate_plot_abcdgr1_coef_070
 ```{r}
 png("../plots/correlation_sig_21vars.png", units="in", width = 10, height = 10, res = 620)
 cor_vars <- data_long %>% select(all_of(sig_vars))
+corrs = cor_auto(cor_vars)
 
-cor = cor_auto(cor_vars)
-testRes = cor.mtest(cor, conf.level = 0.95)
+# May remove this one afterall, depending on how Ran responses to Sinan's comment
+testRes = cor.mtest(corrs, conf.level = 0.95)
 
-corrplot(cor, p.mat = testRes$p, method = 'color', diag = FALSE, type = 'upper',
+corrplot(corrs, p.mat = testRes$p, method = 'color', diag = FALSE, type = 'upper',
          sig.level = c(0.001, 0.01, 0.05), pch.cex = 0.7,
          insig = 'label_sig', pch.col = 'grey20', order = 'original', tl.col = "black", tl.srt = 45, tl.cex = 0.7, cl.cex = 0.8, cl.ratio = 0.2)
-
-View(cor)
 ```
 
 # Generate exposome score
@@ -153,6 +154,59 @@ r2(mod22)[2]
 anova(mod21, mod22, test="Chisq")
 ```
 
+# Sensitivity analysis # Removed correlated among 21 significant variables at cutoff 0.9
+```{r}
+# Remove correlated variables among 21 significant variables at 0.9 cut-off
+# cor_vars <- data_long %>% select(all_of(sig_vars)) # uncomment this if don't use the correlation matrix above (row 71-72)
+# cor = cor_auto(cor_vars)
+corr_vars_rm <- findCorrelation(corrs, cutoff = 0.9, exact = T, names = T, verbose = T) #medhx_6i_l
+abcd_gr1_0.9 <- abcd_gr1 %>% select(-all_of(corr_vars_rm)) # remove correlated variables from training dataset abcd_gr1
+# Don't need to re-run exwas among new set of variables as all of those were run with the same outcome
+# Only medhx_6i_l was removed, thus, we can use sig_vars_bin excluding medhx_6i_l for exposome score (after Dichotomize 2 Likert variables)
+sig_vars_bin_0.9 <- sig_vars_bin[!sig_vars_bin %in% corr_vars_rm]
+
+exwas_headache_binary_0.9 <- exwas(data_train = abcd_gr1_0.9, vars = sig_vars_bin_0.9, outcome = "medhx_2q_l", data_test = abcd_gr2)
+abcd_gr2_weight_0.9 <- exwas_headache_binary_0.9$data_test_exposome
+# Re-run models
+mod1_0.9 <- glmer(medhx_2q_l ~ (1 | site_id_l_br/rel_family_id/src_subject_id) + 
+                   age_years + age_years^2 + age_years^3 + sex_br + race_black + ethnicity_hisp,
+              nAGQ = 0, family = binomial, data = abcd_gr2_weight_0.9 %>% filter(genetic_afr == 0))
+
+mod2_0.9 <- glmer(medhx_2q_l ~ scale(weighted_exposome) + (1 | site_id_l_br/rel_family_id/src_subject_id) + 
+                   age_years + age_years^2 + age_years^3 + sex_br + race_black + ethnicity_hisp, 
+              nAGQ = 0, family = binomial, data = abcd_gr2_weight_0.9 %>% filter(genetic_afr == 0))
+
+mod3_0.9 <- glmer(medhx_2q_l ~ migraine_PRS_EUR + (1 | site_id_l_br/rel_family_id/src_subject_id) + 
+                   age_years + age_years^2 + age_years^3 + sex_br + race_black + ethnicity_hisp, 
+              nAGQ = 0, family = binomial, data = abcd_gr2_weight_0.9 %>% filter(genetic_afr == 0))
+
+mod4_0.9 <- glmer(medhx_2q_l ~ scale(weighted_exposome) + migraine_PRS_EUR + (1 | site_id_l_br/rel_family_id/src_subject_id) + 
+                   age_years + age_years^2 + age_years^3 + sex_br + race_black + ethnicity_hisp, 
+              nAGQ = 0, family = binomial, data = abcd_gr2_weight_0.9 %>% filter(genetic_afr == 0))
+
+mod5_0.9 <- glmer(medhx_2q_l ~ scale(weighted_exposome) * migraine_PRS_EUR + (1 | site_id_l_br/rel_family_id/src_subject_id) + 
+                   age_years + age_years^2 + age_years^3 + sex_br + race_black + ethnicity_hisp, 
+              nAGQ = 0, family = binomial, data = abcd_gr2_weight_0.9 %>% filter(genetic_afr == 0))
+
+com1_0.9 <- tab_model(mod1_0.9, mod2_0.9, mod3_0.9, mod4_0.9, mod5_0.9)
+
+# Nagelkerke’s R2
+r2(mod1_0.9)[2]
+r2(mod2_0.9)[2]
+r2(mod3_0.9)[2]
+r2(mod4_0.9)[2]
+r2(mod5_0.9)[2]
+
+anova(mod1_0.9, mod2_0.9, test="Chisq")
+anova(mod1_0.9, mod3_0.9, test="Chisq")
+anova(mod2_0.9, mod3_0.9, test="Chisq")
+anova(mod2_0.9, mod4_0.9, test="Chisq")
+anova(mod3_0.9, mod4_0.9, test="Chisq") 
+anova(mod4_0.9, mod5_0.9, test="Chisq") 
+
+# adj p
+round(p.adjust(c(4.361e-11, 0.0007253, 0, 0.001132, 6.65e-11, 0.0846), method = "fdr"), 3)
+```
 
 
 

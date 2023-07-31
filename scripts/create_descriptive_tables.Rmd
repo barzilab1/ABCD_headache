@@ -113,9 +113,10 @@ write.csv(
     "../outputs/table1_main_values_070523.csv"
 )
 
+chisq.test(data_wide$ethnicity_hisp , data_wide$headache_ever, correct = TRUE )$p.value
 
 # FDR-adjusted p-values
-table1_adj_p <-  round(p.adjust(c(0.01804, 0.74665, 1, 0.00161, 0.00013, 0.94645, 0.58277, 0.95751, 0.00021, 0.017, 0.00001), method = "fdr"), 3)
+table1_adj_p <-  round(p.adjust(c(0.01804, 0.74665, 1, 0.00161, 0.00013, 0.94645, 0.58277, 0.95751, 0.00021, 0.94727, 0.00001), method = "fdr"), 3)
 
 
 # household income bins in each group

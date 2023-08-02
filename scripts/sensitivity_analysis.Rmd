@@ -34,7 +34,6 @@ sig_vars_1 <- exwas_headache_1$univariate_models_sig # has 1 Likert variable tbi
 
 # Dichotomize 1 Likert variable tbi_ss_worst_overall_l as changing from 0.1 to 0.05
 vars[vars == "tbi_ss_worst_overall_l"] <- "tbi_worst_overall"
-vars[vars == "tbi_ss_worst_overall_l"] <- NULL
 # Significant (p-value <= 0.05)
 exwas_headache_2 <- exwas(data_train = abcd_gr1, vars = vars, outcome = "medhx_2q_l", data_test = abcd_gr2, conf_int = 0.95, p_cutoff = 0.05)
 

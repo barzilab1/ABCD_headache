@@ -2,6 +2,7 @@
 source("config.R")
 source("utility_fun.R")
 library(dplyr)
+
 ########### Discrimination ###########
 ydmes01 = load_instrument("abcd_ydmes01",abcd_files_path)
 
@@ -30,7 +31,7 @@ pnsc01 <- pnsc01 %>%
 fhxssp01 = load_instrument("abcd_fhxssp01",abcd_files_path)
 fhxssp01 = fhxssp01[, grepl("src|interview|event|sex|(fath|moth|momdad)_.*?(alc|dg|dprs)_p", colnames(fhxssp01))]
 
-# Remove information of baseline --> carry one the history to later time points
+# Remove information of baseline --> carry on the history to later time points
 fhxssp01 <- fhxssp01[, !(names(fhxssp01) %in% c("eventname", "interview_date", "interview_age", "sex"))]
 
 

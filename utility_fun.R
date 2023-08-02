@@ -79,59 +79,26 @@ get_est <- function(outcome, predictor, data, random_eff = random_effects, var_a
     # Turn predictor to numeric (in case predictor is binary) - otherwise models will show results predictor == 1
     if(is.factor(predictor)) data <- data %>% mutate(predictor = as.numeric(as.character(predictor)))
 
-    p_value <- c()
-    coef <- c()
-    OR <- c()
-    std_error <- c()
-    t_value <- c()
-    low_ci <- c()
-    high_ci <- c()
+    output <- data.frame("variable" = predictor, "coef" = NA, "OR" = NA, "p_value" = NA, "std_error" = NA, "t_value" = NA, "low_ci" = NA, "high_ci" = NA)
 
-    loadErrors <- new.env(parent = emptyenv())
+    # Binary outcome
+    model <- tryCatch(glmer(get_formula(outcome = outcome, predictor = predictor, random_eff = random_eff, var_added = var_added),
+                            data = data,
+                            family = binomial, nAGQ = 0), error = \(x) return(NULL))
 
-    if(!binary_DV) {
-        # Continuous outcome
-        model <- tryCatch(lmer(get_formula(outcome = outcome, predictor = predictor, random_eff = random_eff, var_added = var_added),
-                               data = data,
-                               control=lmerControl(check.nobs.vs.nlev = "ignore",
-                                                   check.nobs.vs.rankZ = "ignore",
-                                                   check.nobs.vs.nRE = "ignore",
-                                                   optimizer = "bobyqa", optCtrl = list(maxfun = 2e5))), error = function(e) loadErrors[["predictor"]] <- TRUE)
 
-        output <- data.frame("variable" = predictor, "coef" = NA, "p_value" = NA, "std_error" = NA, "t_value" = NA,"low_ci" = NA, "high_ci" = NA)
-    }
-
-    else {
-        # Binary outcome
-        model <- tryCatch(glmer(get_formula(outcome = outcome, predictor = predictor, random_eff = random_eff, var_added = var_added),
-                                data = data,
-                                family = binomial, nAGQ = 0), error = function(e) loadError <<- TRUE)
-
-        output <- data.frame("variable" = predictor, "coef" = NA, "OR" = NA, "p_value" = NA, "std_error" = NA, "t_value" = NA, "low_ci" = NA, "high_ci" = NA)
-    }
-
-    if(isTRUE(loadErrors[["predictor"]])) {
-        output[, "coef"] <- NA
-        output[, "p_value"] <- NA
-        output[, "std_error"] <- NA
-        output[, "t_value"] <- NA
-        output[, "low_ci"] <- NA
-        output[, "high_ci"] <- NA
-    }
-    else{
-    mixed_eff <- tidy(model, effects = "fixed", conf.int = T, conf.level = conf_int)
-    output[, "p_value"] <- parameters::p_value(model) %>% filter(Parameter == predictor) %>% pull(p) # as tidy function does not give p-values for the lmer model
-    output[, "coef"] <- mixed_eff %>% filter(term == predictor) %>% pull(estimate)
-    output[, "std_error"] <- mixed_eff %>% filter(term == predictor) %>% pull(std.error) %>% round(., 3)
-    output[, "t_value"] <- mixed_eff %>% filter(term == predictor) %>% pull(statistic) %>% round(., 3)
-    output[, "low_ci"] <- mixed_eff %>% filter(term == predictor) %>% pull(conf.low) %>% round(., 3)
-    output[, "high_ci"] <- mixed_eff %>% filter(term == predictor) %>% pull(conf.high) %>% round(., 3)
-    }
-
-    if (binary_DV) {
-        if(isTRUE(loadErrors[["predictor"]])) { output[, "OR"] <- NA }
-        else { output[, "OR"] <- round(exp(mixed_eff %>% filter(term == predictor) %>% pull(estimate)), 3) }
-    }
+    if(!is_null(model)){
+      
+        mixed_eff <- tidy(model, effects = "fixed", conf.int = T, conf.level = conf_int)
+        output[, "p_value"] <- parameters::p_value(model) %>% filter(Parameter == predictor) %>% pull(p) # as tidy function does not give p-values for the lmer model
+        output[, "coef"] <- mixed_eff %>% filter(term == predictor) %>% pull(estimate)
+        output[, "std_error"] <- mixed_eff %>% filter(term == predictor) %>% pull(std.error) %>% round(., 3)
+        output[, "t_value"] <- mixed_eff %>% filter(term == predictor) %>% pull(statistic) %>% round(., 3)
+        output[, "low_ci"] <- mixed_eff %>% filter(term == predictor) %>% pull(conf.low) %>% round(., 3)
+        output[, "high_ci"] <- mixed_eff %>% filter(term == predictor) %>% pull(conf.high) %>% round(., 3)
+        output[, "OR"] <- round(exp(mixed_eff %>% filter(term == predictor) %>% pull(estimate)), 3) 
+    
+      }
 
     return(output)
 }

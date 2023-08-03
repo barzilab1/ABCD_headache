@@ -36,8 +36,9 @@ corrplot(cor_bl, p.mat = testRes_bl$p, method = 'color', diag = FALSE, type = 'u
 png("../plots/correlation_1y_98vars.png", units="in", width = 15, height = 15, res = 620)
 cor_vars_1y <- data_long %>% filter(eventname == "1_year_follow_up_y_arm_1") %>% select(all_of(vars)) %>% remove_empty(., c("cols", "rows"))
 
-cor_1y = cor_auto(cor_vars_1y)
-testRes_1y = cor.mtest(cor_vars_1y, conf.level = 0.95)
+# Remove variables causing ""not enough finite observations"
+cor_1y = cor_auto(cor_vars_1y %>% select(-matches("tbi_ss_[n|a]")))
+testRes_1y = cor.mtest(cor_vars_1y %>% select(-matches("tbi_ss_[n|a]")), conf.level = 0.95)
 
 corrplot(cor_1y, p.mat = testRes_1y$p, method = 'color', diag = FALSE, type = 'upper',
          sig.level = c(0.001, 0.01, 0.05), pch.cex = 0.4,
@@ -48,8 +49,9 @@ corrplot(cor_1y, p.mat = testRes_1y$p, method = 'color', diag = FALSE, type = 'u
 png("../plots/correlation_2y_98vars.png", units="in", width = 10, height = 10, res = 620)
 cor_vars_2y <- data_long %>% filter(eventname == "2_year_follow_up_y_arm_1") %>% select(all_of(vars)) %>% remove_empty(., c("cols", "rows")) 
 
-cor_2y = cor_auto(cor_vars_2y)
-testRes_2y = cor.mtest(cor_vars_2y, conf.level = 0.95)
+# Remove variables causing ""not enough finite observations"
+cor_2y = cor_auto(cor_vars_2y %>% select(-matches("tbi_ss_[n|a]")))
+testRes_2y = cor.mtest(cor_vars_2y %>% select(-matches("tbi_ss_[n|a]")), conf.level = 0.95)
 
 corrplot(cor_2y, p.mat = testRes_2y$p, method = 'color', diag = FALSE, type = 'upper',
          sig.level = c(0.001, 0.01, 0.05), pch.cex = 0.4,

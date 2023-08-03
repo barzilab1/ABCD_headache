@@ -76,9 +76,6 @@ get_formula <- function(outcome, predictor, random_eff, var_added = NULL) {
 random_effects <- "(1 | site_id_l_br/rel_family_id/src_subject_id)"
 get_est <- function(outcome, predictor, data, random_eff = random_effects, var_added = NULL, binary_DV = T, conf_int = 0.9) {
 
-    # Turn predictor to numeric (in case predictor is binary) - otherwise models will show results predictor == 1
-    if(is.factor(predictor)) data <- data %>% mutate(predictor = as.numeric(as.character(predictor)))
-
     output <- data.frame("variable" = predictor, "coef" = NA, "OR" = NA, "p_value" = NA, "std_error" = NA, "t_value" = NA, "low_ci" = NA, "high_ci" = NA)
 
     # Binary outcome
@@ -88,7 +85,7 @@ get_est <- function(outcome, predictor, data, random_eff = random_effects, var_a
 
 
     if(!is_null(model)){
-      
+
         mixed_eff <- tidy(model, effects = "fixed", conf.int = T, conf.level = conf_int)
         output[, "p_value"] <- parameters::p_value(model) %>% filter(Parameter == predictor) %>% pull(p) # as tidy function does not give p-values for the lmer model
         output[, "coef"] <- mixed_eff %>% filter(term == predictor) %>% pull(estimate)
@@ -96,8 +93,8 @@ get_est <- function(outcome, predictor, data, random_eff = random_effects, var_a
         output[, "t_value"] <- mixed_eff %>% filter(term == predictor) %>% pull(statistic) %>% round(., 3)
         output[, "low_ci"] <- mixed_eff %>% filter(term == predictor) %>% pull(conf.low) %>% round(., 3)
         output[, "high_ci"] <- mixed_eff %>% filter(term == predictor) %>% pull(conf.high) %>% round(., 3)
-        output[, "OR"] <- round(exp(mixed_eff %>% filter(term == predictor) %>% pull(estimate)), 3) 
-    
+        output[, "OR"] <- round(exp(mixed_eff %>% filter(term == predictor) %>% pull(estimate)), 3)
+
       }
 
     return(output)

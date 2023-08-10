@@ -1,4 +1,3 @@
-##########
 # ABCD_headache project
 
 

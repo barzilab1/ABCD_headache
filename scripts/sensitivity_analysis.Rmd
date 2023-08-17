@@ -43,23 +43,23 @@ abcd_gr2_weight_sens2 <- exwas_headache_2$data_test_exposome
 ```{r}
 # eTable 5
 mod1.2 <- glmer(medhx_2q_l ~ (1 | site_id_l_br/rel_family_id/src_subject_id) + 
-                   age_years + age_years^2 + age_years^3 + sex_br + race_black + ethnicity_hisp,
+                   age_years + age_years^2 + age_years^3 + sex_br,
               nAGQ = 0, family = binomial, data = abcd_gr2_weight_sens2 %>% filter(genetic_afr == 0))
 
 mod2.2 <- glmer(medhx_2q_l ~ scale(weighted_exposome) + (1 | site_id_l_br/rel_family_id/src_subject_id) + 
-                   age_years + age_years^2 + age_years^3 + sex_br + race_black + ethnicity_hisp, 
+                   age_years + age_years^2 + age_years^3 + sex_br,
               nAGQ = 0, family = binomial, data = abcd_gr2_weight_sens2 %>% filter(genetic_afr == 0))
 
 mod3.2 <- glmer(medhx_2q_l ~ migraine_PRS_EUR + (1 | site_id_l_br/rel_family_id/src_subject_id) + 
-                   age_years + age_years^2 + age_years^3 + sex_br + race_black + ethnicity_hisp, 
+                   age_years + age_years^2 + age_years^3 + sex_br,
               nAGQ = 0, family = binomial, data = abcd_gr2_weight_sens2 %>% filter(genetic_afr == 0))
 
 mod4.2 <- glmer(medhx_2q_l ~ scale(weighted_exposome) + migraine_PRS_EUR + (1 | site_id_l_br/rel_family_id/src_subject_id) + 
-                   age_years + age_years^2 + age_years^3 + sex_br + race_black + ethnicity_hisp, 
+                   age_years + age_years^2 + age_years^3 + sex_br,
               nAGQ = 0, family = binomial, data = abcd_gr2_weight_sens2 %>% filter(genetic_afr == 0))
 
 mod5.2 <- glmer(medhx_2q_l ~ scale(weighted_exposome) * migraine_PRS_EUR + (1 | site_id_l_br/rel_family_id/src_subject_id) + 
-                   age_years + age_years^2 + age_years^3 + sex_br + race_black + ethnicity_hisp, nAGQ = 0, family = binomial, 
+                   age_years + age_years^2 + age_years^3 + sex_br, nAGQ = 0, family = binomial,
                data = abcd_gr2_weight_sens2 %>% filter(genetic_afr == 0))
 
 com2 <- tab_model(mod1.2, mod2.2, mod3.2, mod4.2, mod5.2)
@@ -79,7 +79,7 @@ anova(mod3.2, mod4.2, test="Chisq")
 anova(mod4.2, mod5.2, test="Chisq") 
 
 # adj p
-round(p.adjust(c(1.403e-11, 0.0007253, 0, 0.001012, 1.924e-11, 0.1001), method = "fdr"), 3) 
+round(p.adjust(c(8.556e-12, 0.0005176, 0, 0.000793, 1.283e-11, 0.1004), method = "fdr"), 3) 
 ```
 
 

@@ -28,6 +28,19 @@ source("../config.R")
 data_long <- read.csv("../data/dataset_long.csv")
 ```
 
+```{r}
+library(naniar)
+# check missing data of 21 sig_vars
+## baseline
+data_long %>% filter(eventname == "baseline_year_1_arm_1") %>% select(all_of(sig_vars)) %>% miss_var_summary()
+data_long %>% filter(eventname == "1_year_follow_up_y_arm_1") %>% select(all_of(sig_vars)) %>% miss_var_summary()
+data_long %>% filter(eventname == "2_year_follow_up_y_arm_1") %>% select(all_of(sig_vars)) %>% miss_var_summary()
+data_long %>% select(all_of(sig_vars)) %>% miss_var_summary()
+
+
+table(data_long$eventname)
+```
+
 # Create discovery and testing subsets
 ```{r}
 # ABCD dataset 1 & 2
@@ -96,23 +109,23 @@ abcd_gr2_weight <- exwas_headache_binary$data_test_exposome
 ```{r}
 # Table 3
 mod1 <- glmer(medhx_2q_l ~ (1 | site_id_l_br/rel_family_id/src_subject_id) + 
-                   age_years + age_years^2 + age_years^3 + sex_br + race_black + ethnicity_hisp,
+                   age_years + age_years^2 + age_years^3 + sex_br,
               nAGQ = 0, family = binomial, data = abcd_gr2_weight %>% filter(genetic_afr == 0))
 
 mod2 <- glmer(medhx_2q_l ~ scale(weighted_exposome) + (1 | site_id_l_br/rel_family_id/src_subject_id) + 
-                   age_years + age_years^2 + age_years^3 + sex_br + race_black + ethnicity_hisp, 
+                   age_years + age_years^2 + age_years^3 + sex_br,
               nAGQ = 0, family = binomial, data = abcd_gr2_weight %>% filter(genetic_afr == 0))
 
 mod3 <- glmer(medhx_2q_l ~ migraine_PRS_EUR + (1 | site_id_l_br/rel_family_id/src_subject_id) + 
-                   age_years + age_years^2 + age_years^3 + sex_br + race_black + ethnicity_hisp, 
+                   age_years + age_years^2 + age_years^3 + sex_br,
               nAGQ = 0, family = binomial, data = abcd_gr2_weight %>% filter(genetic_afr == 0))
 
 mod4 <- glmer(medhx_2q_l ~ scale(weighted_exposome) + migraine_PRS_EUR + (1 | site_id_l_br/rel_family_id/src_subject_id) + 
-                   age_years + age_years^2 + age_years^3 + sex_br + race_black + ethnicity_hisp, 
+                   age_years + age_years^2 + age_years^3 + sex_br,
               nAGQ = 0, family = binomial, data = abcd_gr2_weight %>% filter(genetic_afr == 0))
 
 mod5 <- glmer(medhx_2q_l ~ scale(weighted_exposome) * migraine_PRS_EUR + (1 | site_id_l_br/rel_family_id/src_subject_id) + 
-                   age_years + age_years^2 + age_years^3 + sex_br + race_black + ethnicity_hisp, 
+                   age_years + age_years^2 + age_years^3 + sex_br,
               nAGQ = 0, family = binomial, data = abcd_gr2_weight %>% filter(genetic_afr == 0))
 
 com1 <- tab_model(mod1, mod2, mod3, mod4, mod5)
@@ -132,7 +145,7 @@ anova(mod3, mod4, test="Chisq")
 anova(mod4, mod5, test="Chisq") 
 
 # adj p
-round(p.adjust(c(9.83e-12, 0.0007253, 0, 0.001058, 1.406e-11, 0.07701), method = "fdr"), 3)
+round(p.adjust(c(6.388e-12, 0.0005176, 0, 0.0008303, 1e-11, 0.0763), method = "fdr"), 3)
 ```
 
 # Supplement - models on whole cohort
@@ -159,10 +172,12 @@ anova(mod21, mod22, test="Chisq")
 
 # Sensitivity analysis # Removed correlated among 21 significant variables at cutoff 0.9
 ```{r}
+# eTable 6
 # Remove correlated variables among 21 significant variables at 0.9 cut-off
 cor_vars <- abcd_gr1 %>% select(all_of(sig_vars))
 corrs = cor_auto(cor_vars)
-corr_vars_rm <- findCorrelation(corrs, cutoff = 0.9, exact = T, names = T, verbose = T) #medhx_6i_l
+corr_vars_rm <- findCorrelation(corrs, cutoff = 0.9, exact = T, names = T, verbose = T) #medhx_ss_6i_times_p_l and medhx_6i_l
+# Compare row 21  and column  14 with corr  0.983
 abcd_gr1_0.9 <- abcd_gr1 %>% select(-all_of(corr_vars_rm)) # remove correlated variables from training dataset abcd_gr1
 # Don't need to re-run exwas among new set of variables as all of those were run with the same outcome
 # Only medhx_6i_l was removed, thus, we can use sig_vars_bin excluding medhx_6i_l for exposome score (after Dichotomize 2 Likert variables)
@@ -172,23 +187,23 @@ exwas_headache_binary_0.9 <- exwas(data_train = abcd_gr1_0.9, vars = sig_vars_bi
 abcd_gr2_weight_0.9 <- exwas_headache_binary_0.9$data_test_exposome
 # Re-run models
 mod1_0.9 <- glmer(medhx_2q_l ~ (1 | site_id_l_br/rel_family_id/src_subject_id) + 
-                   age_years + age_years^2 + age_years^3 + sex_br + race_black + ethnicity_hisp,
+                   age_years + age_years^2 + age_years^3 + sex_br,
               nAGQ = 0, family = binomial, data = abcd_gr2_weight_0.9 %>% filter(genetic_afr == 0))
 
 mod2_0.9 <- glmer(medhx_2q_l ~ scale(weighted_exposome) + (1 | site_id_l_br/rel_family_id/src_subject_id) + 
-                   age_years + age_years^2 + age_years^3 + sex_br + race_black + ethnicity_hisp, 
+                   age_years + age_years^2 + age_years^3 + sex_br, 
               nAGQ = 0, family = binomial, data = abcd_gr2_weight_0.9 %>% filter(genetic_afr == 0))
 
 mod3_0.9 <- glmer(medhx_2q_l ~ migraine_PRS_EUR + (1 | site_id_l_br/rel_family_id/src_subject_id) + 
-                   age_years + age_years^2 + age_years^3 + sex_br + race_black + ethnicity_hisp, 
+                   age_years + age_years^2 + age_years^3 + sex_br, 
               nAGQ = 0, family = binomial, data = abcd_gr2_weight_0.9 %>% filter(genetic_afr == 0))
 
 mod4_0.9 <- glmer(medhx_2q_l ~ scale(weighted_exposome) + migraine_PRS_EUR + (1 | site_id_l_br/rel_family_id/src_subject_id) + 
-                   age_years + age_years^2 + age_years^3 + sex_br + race_black + ethnicity_hisp, 
+                   age_years + age_years^2 + age_years^3 + sex_br, 
               nAGQ = 0, family = binomial, data = abcd_gr2_weight_0.9 %>% filter(genetic_afr == 0))
 
 mod5_0.9 <- glmer(medhx_2q_l ~ scale(weighted_exposome) * migraine_PRS_EUR + (1 | site_id_l_br/rel_family_id/src_subject_id) + 
-                   age_years + age_years^2 + age_years^3 + sex_br + race_black + ethnicity_hisp, 
+                   age_years + age_years^2 + age_years^3 + sex_br, 
               nAGQ = 0, family = binomial, data = abcd_gr2_weight_0.9 %>% filter(genetic_afr == 0))
 
 com1_0.9 <- tab_model(mod1_0.9, mod2_0.9, mod3_0.9, mod4_0.9, mod5_0.9)
@@ -208,7 +223,7 @@ anova(mod3_0.9, mod4_0.9, test="Chisq")
 anova(mod4_0.9, mod5_0.9, test="Chisq") 
 
 # adj p
-round(p.adjust(c(4.361e-11, 0.0007253, 0, 0.001132, 6.65e-11, 0.0846), method = "fdr"), 3)
+round(p.adjust(c(3.115e-11, 0.0005176, 0, 0.0008882, 5.203e-11, 0.0824), method = "fdr"), 3)
 ```
 
 

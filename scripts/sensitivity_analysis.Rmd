@@ -62,7 +62,7 @@ mod5.2 <- glmer(medhx_2q_l ~ scale(weighted_exposome) * migraine_PRS_EUR + (1 | 
                    age_years + age_years^2 + age_years^3 + sex_br, nAGQ = 0, family = binomial,
                data = abcd_gr2_weight_sens2 %>% filter(genetic_afr == 0))
 
-com2 <- tab_model(mod1.2, mod2.2, mod3.2, mod4.2, mod5.2)
+com2 <- tab_model(mod1.2, mod2.2, mod3.2, mod4.2, mod5.2, digits.rsq = 4)
 
 # Nagelkerke’s R2
 r2(mod1.2)[2]

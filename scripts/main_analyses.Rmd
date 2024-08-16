@@ -20,6 +20,11 @@ library(purrr)
 library(qgraph)
 library(caret)
 library(corrplot)
+library(cv)
+library(iml)
+library(randomForest)
+library(ggplot2)
+library(naniar)
 source("../utility_fun.R")
 source("../config.R")
 ```
@@ -63,6 +68,14 @@ cor_vars <- abcd_gr1 %>% select(all_of(sig_vars))
 corrs = cor_auto(cor_vars)
 ```
 
+# Check missing frequency of significant variables
+```{r}
+data_long %>% filter(eventname == "baseline_year_1_arm_1") %>% select(all_of(sig_vars)) %>% miss_var_summary() %>% mutate(eventname = "Baseline") %>%
+    bind_rows(data_long %>% filter(eventname == "1_year_follow_up_y_arm_1") %>% select(all_of(sig_vars)) %>% miss_var_summary() %>% mutate(eventname = "1-Year follow-up")) %>%
+    bind_rows(data_long %>% filter(eventname == "2_year_follow_up_y_arm_1") %>% select(all_of(sig_vars)) %>% miss_var_summary() %>% mutate(eventname = "2-Year follow-up")) %>%
+    tidyr::pivot_wider(., names_from = eventname, values_from = c(n_miss, pct_miss)) %>% View()
+```
+
 # Generate exposome score
 ```{r}
 # Get weight from abcd_gr1 # but use binary variables of Likert variables only
@@ -79,27 +92,29 @@ abcd_gr2_weight <- exwas_headache_binary$data_test_exposome
 # Multivariate models in the main result
 ```{r}
 # Table 3
+abcd_gr2_weight_afr <- abcd_gr2_weight %>% filter(genetic_afr == 0)
+
 mod1 <- glmer(medhx_2q_l ~ (1 | site_id_l_br/rel_family_id/src_subject_id) + 
                    age_years + age_years^2 + age_years^3 + sex_br,
-              nAGQ = 0, family = binomial, data = abcd_gr2_weight %>% filter(genetic_afr == 0))
+              nAGQ = 0, family = binomial, data = abcd_gr2_weight_afr)
 
 mod2 <- glmer(medhx_2q_l ~ scale(weighted_exposome) + (1 | site_id_l_br/rel_family_id/src_subject_id) + 
                    age_years + age_years^2 + age_years^3 + sex_br,
-              nAGQ = 0, family = binomial, data = abcd_gr2_weight %>% filter(genetic_afr == 0))
+              nAGQ = 0, family = binomial, data = abcd_gr2_weight_afr)
 
 mod3 <- glmer(medhx_2q_l ~ migraine_PRS_EUR + (1 | site_id_l_br/rel_family_id/src_subject_id) + 
                    age_years + age_years^2 + age_years^3 + sex_br,
-              nAGQ = 0, family = binomial, data = abcd_gr2_weight %>% filter(genetic_afr == 0))
+              nAGQ = 0, family = binomial, data = abcd_gr2_weight_afr)
 
 mod4 <- glmer(medhx_2q_l ~ scale(weighted_exposome) + migraine_PRS_EUR + (1 | site_id_l_br/rel_family_id/src_subject_id) + 
                    age_years + age_years^2 + age_years^3 + sex_br,
-              nAGQ = 0, family = binomial, data = abcd_gr2_weight %>% filter(genetic_afr == 0))
+              nAGQ = 0, family = binomial, data = abcd_gr2_weight_afr)
 
 mod5 <- glmer(medhx_2q_l ~ scale(weighted_exposome) * migraine_PRS_EUR + (1 | site_id_l_br/rel_family_id/src_subject_id) + 
                    age_years + age_years^2 + age_years^3 + sex_br,
-              nAGQ = 0, family = binomial, data = abcd_gr2_weight %>% filter(genetic_afr == 0))
+              nAGQ = 0, family = binomial, data = abcd_gr2_weight_afr)
 
-com1 <- tab_model(mod1, mod2, mod3, mod4, mod5, digits.rsq = 4)
+com1 <- tab_model(mod1, mod2, mod3, mod4, mod5, digits.rsq = 4, digits = 4)
 
 # R2
 r2(mod1)[2]
@@ -117,6 +132,71 @@ anova(mod4, mod5, test="Chisq")
 
 # adj p
 round(p.adjust(c(6.388e-12, 0.0005176, 0, 0.0008303, 1e-11, 0.0763), method = "fdr"), 3)
+
+
+
+# Get RERI of model 5
+get_reri(model = mod5, coef = c(2,3,6))[1]
+
+# Check out AIC/BIC to see whether the additional variables make a significant difference in the model
+# Load necessary libraries
+
+combine_aic_bic <- function(models) {
+  results <- list()
+  
+  for (i in seq_along(models)) {
+    model <- models[[i]]
+    aic_value <- AIC(model)
+    bic_value <- BIC(model)
+    results[[i]] <- data.frame(
+      Model = paste("Model", i),
+      AIC = aic_value,
+      BIC = bic_value
+    )
+  }
+  combined_results <- do.call(rbind, results)
+  return(combined_results)
+}
+
+combined_results <- combine_aic_bic(list(mod1, mod2, mod3, mod4, mod5))
+
+
+# Try Shapley to see how of the explained variance is explained by each variable in the model
+
+abcd_gr2_weight_afr_rf <- abcd_gr2_weight_afr %>% mutate(GxE = weighted_exposome*migraine_PRS_EUR)
+random_forest_main <- randomForest(medhx_2q_l ~ weighted_exposome + migraine_PRS_EUR + GxE,  #+ age_years + sex_br
+                   data = abcd_gr2_weight_afr_rf, ntree = 10)
+dat_rf <- abcd_gr2_weight_afr_rf %>% dplyr::select(weighted_exposome, migraine_PRS_EUR, GxE)
+predictor_main <- Predictor$new(random_forest_main, data = dat_rf, y = abcd_gr2_weight_afr_rf$medhx_2q_l)
+
+importance_main <- FeatureImp$new(predictor_main, loss = "mae")
+importance_main
+
+plot(importance_main)
+
+# Cross validation
+## Get AUC
+AUC <- function(y, yhat) pROC::roc(y~yhat, direction = "<")$auc
+
+clusterVariables <- c("site_id_l_br", "rel_family_id", "src_subject_id")
+
+cv_mod1 <- cv(mod1, k = 10, clusterVariables = clusterVariables, criterion = AUC, seed = 724, ncores = 3)
+cv_mod2 <- cv(mod2, k = 10, clusterVariables = clusterVariables, criterion = AUC, seed = 724, ncores = 3)
+cv_mod3 <- cv(mod3, k = 10, clusterVariables = clusterVariables, criterion = AUC, seed = 724, ncores = 3)
+cv_mod4 <- cv(mod4, k = 10, clusterVariables = clusterVariables, criterion = AUC, seed = 724, ncores = 3)
+cv_mod5 <- cv(mod5, k = 10, clusterVariables = clusterVariables, criterion = AUC, seed = 724, ncores = 3)
+
+# Export results
+## Number of clusters
+cv_mod_main <- list(cv_mod1, cv_mod2, cv_mod3, cv_mod4, cv_mod5)
+get_n_clusters(cv_mod_main) # May not need # Will remove at the end (remove the function get_n_clusters in utility_fun)
+
+## Coefficients
+get_cv_ORs(cv_mod_main) %>% View()
+
+# Get AUC
+get_criteria(cv_mod_main)$criterion_by_fold %>% View()
+get_criteria(cv_mod_main)$criterion_average %>% View()
 ```
 
 # Supplement - models on whole cohort
@@ -195,8 +275,115 @@ anova(mod4_0.9, mod5_0.9, test="Chisq")
 
 # adj p
 round(p.adjust(c(3.115e-11, 0.0005176, 0, 0.0008882, 5.203e-11, 0.0824), method = "fdr"), 3)
+
+
+
+# Get RERI of model 5
+get_reri(model = mod5_0.9, coef = c(2,3,6))[1]
+
+# Cross validation
+cv_mod1_0.9 <- cv(mod1_0.9, k = 10, clusterVariables = clusterVariables, criterion = AUC, seed = 724, ncores = 3)
+cv_mod2_0.9 <- cv(mod2_0.9, k = 10, clusterVariables = clusterVariables, criterion = AUC, seed = 724, ncores = 3)
+cv_mod3_0.9 <- cv(mod3_0.9, k = 10, clusterVariables = clusterVariables, criterion = AUC, seed = 724, ncores = 3)
+cv_mod4_0.9 <- cv(mod4_0.9, k = 10, clusterVariables = clusterVariables, criterion = AUC, seed = 724, ncores = 3)
+cv_mod5_0.9 <- cv(mod5_0.9, k = 10, clusterVariables = clusterVariables, criterion = AUC, seed = 724, ncores = 3)
+
+# Export results
+## Number of clusters
+cv_mod_0.9 <- list(cv_mod1_0.9, cv_mod2_0.9, cv_mod3_0.9, cv_mod4_0.9, cv_mod5_0.9)
+get_n_clusters(cv_mod_0.9) # May not need # Will remove at the end (remove the function get_n_clusters in utility_fun)
+
+## Coefficients
+get_cv_ORs(cv_mod_0.9) %>% View()
+
+# Get AUC
+get_criteria(cv_mod_0.9)$criterion_by_fold %>% View()
+get_criteria(cv_mod_0.9)$criterion_average %>% View()
 ```
 
+# Sensitivity analysis # Removed correlated among 21 significant variables at cutoff 0.7
+```{r}
+# eTable 7
+# Remove correlated variables among 21 significant variables at 0.7 cut-off
+corr_vars_rm_0.7 <- findCorrelation(corrs, cutoff = 0.7, exact = T, names = T, verbose = T)
+# "ple_jail_y"             "medhx_6i_l"             "tbi_ss_worst_overall_l" "ple_separ_y"            "famhx_ss_momdad_dprs_p"
+
+# Compare row 12  and column  5 with corr  0.85 #ple_jail_y & ple_arrest_y
+# Compare row 21  and column  13 with corr  0.778 # medhx_6i_l & tbi_ss_worst_overall_l
+# Compare row 13  and column  16 with corr  0.73 # tbi_ss_worst_overall_l & tbi_1
+# Compare row 6  and column  9 with corr  0.78 # ple_separ_y & ple_step_y
+# Compare row 8  and column  11 with corr  0.711 # famhx_ss_momdad_dprs_p & famhx_ss_momdad_alc_p
+
+abcd_gr1_0.7 <- abcd_gr1 %>% select(-all_of(corr_vars_rm_0.7)) # remove correlated variables from training dataset abcd_gr1
+sig_vars_bin_0.7 <- sig_vars_bin[!sig_vars_bin %in% corr_vars_rm_0.7]
+
+exwas_headache_binary_0.7 <- exwas(data_train = abcd_gr1_0.7, vars = sig_vars_bin_0.7, outcome = "medhx_2q_l", data_test = abcd_gr2)
+abcd_gr2_weight_0.7 <- exwas_headache_binary_0.7$data_test_exposome
+# Re-run models
+mod1_0.7 <- glmer(medhx_2q_l ~ (1 | site_id_l_br/rel_family_id/src_subject_id) + 
+                      age_years + age_years^2 + age_years^3 + sex_br,
+                  nAGQ = 0, family = binomial, data = abcd_gr2_weight_0.7 %>% filter(genetic_afr == 0))
+
+mod2_0.7 <- glmer(medhx_2q_l ~ scale(weighted_exposome) + (1 | site_id_l_br/rel_family_id/src_subject_id) + 
+                      age_years + age_years^2 + age_years^3 + sex_br, 
+                  nAGQ = 0, family = binomial, data = abcd_gr2_weight_0.7 %>% filter(genetic_afr == 0))
+
+mod3_0.7 <- glmer(medhx_2q_l ~ migraine_PRS_EUR + (1 | site_id_l_br/rel_family_id/src_subject_id) + 
+                      age_years + age_years^2 + age_years^3 + sex_br, 
+                  nAGQ = 0, family = binomial, data = abcd_gr2_weight_0.7 %>% filter(genetic_afr == 0))
+
+mod4_0.7 <- glmer(medhx_2q_l ~ scale(weighted_exposome) + migraine_PRS_EUR + (1 | site_id_l_br/rel_family_id/src_subject_id) + 
+                      age_years + age_years^2 + age_years^3 + sex_br, 
+                  nAGQ = 0, family = binomial, data = abcd_gr2_weight_0.7 %>% filter(genetic_afr == 0))
+
+mod5_0.7 <- glmer(medhx_2q_l ~ scale(weighted_exposome) * migraine_PRS_EUR + (1 | site_id_l_br/rel_family_id/src_subject_id) + 
+                      age_years + age_years^2 + age_years^3 + sex_br, 
+                  nAGQ = 0, family = binomial, data = abcd_gr2_weight_0.7 %>% filter(genetic_afr == 0))
+
+com1_0.7 <- tab_model(mod1_0.7, mod2_0.7, mod3_0.7, mod4_0.7, mod5_0.7)
+
+# R2
+r2(mod1_0.7)[2]
+r2(mod2_0.7)[2]
+r2(mod3_0.7)[2]
+r2(mod4_0.7)[2]
+r2(mod5_0.7)[2]
+
+anova(mod1_0.7, mod2_0.7, test="Chisq")
+anova(mod1_0.7, mod3_0.7, test="Chisq")
+anova(mod2_0.7, mod3_0.7, test="Chisq")
+anova(mod2_0.7, mod4_0.7, test="Chisq")
+anova(mod3_0.7, mod4_0.7, test="Chisq") 
+anova(mod4_0.7, mod5_0.7, test="Chisq") 
+
+# adj p
+round(p.adjust(c(2.5e-11, 0.0005176, 0, 0.0008023, 3.792e-11, 0.1317), method = "fdr"), 3) #0.000 0.001 0.000 0.001 0.000 0.132
+
+
+
+# Get RERI of model 5
+get_reri(model = mod5_0.7, coef = c(2,3,6))[1]
+
+
+# Cross validation
+cv_mod1_0.7 <- cv(mod1_0.7, k = 10, clusterVariables = clusterVariables, criterion = AUC, seed = 724, ncores = 3)
+cv_mod2_0.7 <- cv(mod2_0.7, k = 10, clusterVariables = clusterVariables, criterion = AUC, seed = 724, ncores = 3)
+cv_mod3_0.7 <- cv(mod3_0.7, k = 10, clusterVariables = clusterVariables, criterion = AUC, seed = 724, ncores = 3)
+cv_mod4_0.7 <- cv(mod4_0.7, k = 10, clusterVariables = clusterVariables, criterion = AUC, seed = 724, ncores = 3)
+cv_mod5_0.7 <- cv(mod5_0.7, k = 10, clusterVariables = clusterVariables, criterion = AUC, seed = 724, ncores = 3)
+
+# Export results
+## Number of clusters
+cv_mod_0.7 <- list(cv_mod1_0.7, cv_mod2_0.7, cv_mod3_0.7, cv_mod4_0.7, cv_mod5_0.7)
+get_n_clusters(cv_mod_0.7) # May not need # Will remove at the end (remove the function get_n_clusters in utility_fun)
+
+## Coefficients
+get_cv_ORs(cv_mod_0.7) %>% View()
+
+# Get AUC
+get_criteria(cv_mod_0.7)$criterion_by_fold %>% View()
+get_criteria(cv_mod_0.7)$criterion_average %>% View()
+```
 
 
 

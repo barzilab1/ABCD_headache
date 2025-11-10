@@ -16,6 +16,7 @@ library(sjPlot)
 library(tidyr)
 library(janitor)
 library(purrr)
+library(nortest)
 source("../utility_fun.R")
 ```
 
@@ -27,14 +28,19 @@ data_long <- read.csv("../data/dataset_long.csv")
 ```{r}
 # Numbers in abstract
 ## Total N
-N <- length(unique(data_wide$src_subject_id))
+N <- length(unique(data_wide$src_subject_id)) # 11873
 ## Mean age at baseline
-data_long %>% filter(eventname == "baseline_year_1_arm_1") %>% summarise(mean = mean(interview_age, na.rm = T)/12)
+data_long %>% filter(eventname == "baseline_year_1_arm_1") %>% summarise(mean = mean(interview_age, na.rm = T)/12) # 9.915087
+data_long %>% filter(eventname == "baseline_year_1_arm_1") %>% summarise(sd = sd(interview_age, na.rm = T)/12) # 0.6246999
 ## % of females
 prop.table(table(data_wide$sex_br))
 ## % of headache
 table(data_wide$headache_ever) # 907
 907/N
+
+prop.table(table(data_long$medhx_2q_l[data_long$eventname == "baseline_year_1_arm_1"]))
+prop.table(table(data_long$medhx_2q_l[data_long$eventname == "1_year_follow_up_y_arm_1"]))
+prop.table(table(data_long$medhx_2q_l[data_long$eventname == "2_year_follow_up_y_arm_1"]))
 
 ## Discovery sample
 abcd_gr1 <- read_rds("../outputs/abcd_gr1.rds")
@@ -95,6 +101,14 @@ table1_var <- data_wide %>%
 
 table1_factor <- table1_var[!table1_var %in% c("age_years", "household_income")]
 
+# Check normality of continuous variables
+
+ad.test(data_wide$age_years) # not normal
+ad.test(data_wide$household_income) # not normal
+
+# Check if need to use Fisher's exact test
+check_test_type(data = data_wide, var_list = table1_factor, reference_var = "headache_ever") # All Chi-square test
+
 
 write.csv(
     print(
@@ -108,15 +122,17 @@ write.csv(
         ),
         pDigits = 5,
         catDigits = 2,
-        contDigits = 2
+        contDigits = 2,
+        nonnormal = c("age_years", "household_income")
     ),
-    "../outputs/table1_main_values_070523.csv"
+    "../outputs/table1_main_values_072423.csv"
 )
 
 chisq.test(data_wide$ethnicity_hisp , data_wide$headache_ever, correct = TRUE )$p.value
 
 # FDR-adjusted p-values
-table1_adj_p <-  round(p.adjust(c(0.01804, 0.74665, 1, 0.00161, 0.00013, 0.94645, 0.58277, 0.95751, 0.00021, 0.94727, 0.00001), method = "fdr"), 3)
+# table1_adj_p <-  round(p.adjust(c(0.01804, 0.74665, 1, 0.00161, 0.00013, 0.94645, 0.58277, 0.95751, 0.00021, 0.94727, 0.00001), method = "fdr"), 3)
+table1_adj_p <-  round(p.adjust(c(0.01552, 0.74665, 1, 0.00161, 0.00013, 0.94645, 0.58277, 0.95751, 0.00021, 0.94727, 0.00001), method = "fdr"), 3)
 
 
 # household income bins in each group
@@ -151,12 +167,20 @@ mod_headache_prs <- glmer(data = data_long %>% filter(genetic_afr == 0),
                               sex_br +
                               (1 | site_id_l_br/rel_family_id/src_subject_id), family = binomial, nAGQ = 0)
 
-tab_model(mod_headache_med1, mod_headache_med2, mod_headache_prs, show.intercept = F)
+tab_model(mod_headache_med1, mod_headache_med2, mod_headache_prs, show.intercept = F, digits = 3)
+
+
+# New approach - will choose later after Ran finalize the paper
+chisq.test(table(data_long$Daily.Preventive.medications_2w, data_long$medhx_2q_l))
+chisq.test(table(data_long$Rescue.Medications_2w, data_long$medhx_2q_l))
+# t.test(data_long$migraine_PRS_EUR, data_long$medhx_2q_l)
 ```
 
 ```{r}
 # etable 2: internal validation # by headache
 etable3_var <- c("daily_med_2w_ever", "rescue_med_2w_ever") #, "migraine_PRS_EUR"
+
+check_test_type(data = data_wide, var_list = etable3_var, reference_var = "headache_ever") # All Chi-square test
 
 write.csv(
     print(
@@ -173,7 +197,7 @@ write.csv(
         catDigits = 2,
         contDigits = 2
     ),
-    "../outputs/etable2_main_values_070523.csv"
+    "../outputs/etable2_main_values_072423.csv"
 )
 
 table2_adj_p <- round(p.adjust(c(0.00001, 0.00001), method = "fdr"), 3)
